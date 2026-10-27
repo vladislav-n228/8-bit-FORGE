@@ -1,1 +1,1 @@
-"""Ядро: константы, модель данных, теория, настройки."""
+"""Core: constants, data model, theory, settings."""

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Синтез звука: осцилляторы, ADSR, ударные, рендер песни, WAV и MIDI."""
+"""Sound synthesis: oscillators, ADSR, drums, song rendering, WAV and MIDI."""
 
 import math
 import struct
@@ -32,11 +32,11 @@ def _phase(f0, t, sr, depth, rate):
 
 def _quant_tri(ph):
     tri = 1.0 - 4.0 * np.abs((ph % 1.0) - 0.5)
-    return np.round((tri + 1.0) * 7.5) / 7.5 - 1.0  # 4-битный треугольник как у NES
+    return np.round((tri + 1.0) * 7.5) / 7.5 - 1.0  # 4-bit triangle like on the NES
 
 
 def _formant_voice(tr, f0, ph, t, sr, rng):
-    """Синтетический голос: гармоники с формантами гласной + немного «дыхания»."""
+    """Synthetic voice: harmonics shaped by the vowel's formants + a little "breath"."""
     v = tr.vowel
     if v not in VOWELS:
         v = 'аоуиэ'[int(round(f0)) % 5]
@@ -159,7 +159,7 @@ def master_process(mix, m):
 
 
 def render_song(song, m, s0=0, s1=None, loop=False, only=None):
-    """Рендер шагов [s0, s1) в стерео float32. Возвращает (audio, sr)."""
+    """Renders steps [s0, s1) to stereo float32. Returns (audio, sr)."""
     sr = int(m.get('sr', 44100))
     total = song.total_steps
     s1 = total if s1 is None else s1
@@ -218,7 +218,7 @@ def render_song(song, m, s0=0, s1=None, loop=False, only=None):
     else:
         exact = song.params.get('exact_sec')
         if exact and s0 == 0 and s1 == total and abs(total * sd - exact) < 0.05:
-            mix = mix[:n_body].copy()  # ровно в секунду: хвост обрезаем с мягким затуханием
+            mix = mix[:n_body].copy()  # exactly to the second: the tail is cut with a soft fade
             k = min(n_body, int(0.25 * sr))
             mix[-k:] *= np.linspace(1.0, 0.0, k, dtype=np.float32)[:, None]
         else:

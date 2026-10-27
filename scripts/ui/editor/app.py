@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Главное окно ручного режима: переменные, тема, построение интерфейса."""
+"""Main window of manual mode: variables, theme, building the interface."""
 
 import os
 import queue
@@ -35,8 +35,8 @@ from scripts.ui.widgets import ScrollFrame, translate_combo
 
 
 class App(CanvasMixin, MouseMixin, HistoryMixin, GenerationMixin, EditingMixin, PlaybackMixin, FilesMixin, CompanionMixin, MediaMixin, KeyboardMixin):
-    """Ручной режим: генератор по стилю, аранжировка, пиано-ролл, звук треков, экспорт.
-    Методы разложены по миксинам в соседних файлах этой папки."""
+    """Manual mode: style generator, arrangement, piano roll, track sound, export.
+    The methods are split into mixins in the neighbouring files of this folder."""
 
     def __init__(self, root, song=None, shell=None, state=None):
         self.root = root
@@ -73,7 +73,7 @@ class App(CanvasMixin, MouseMixin, HistoryMixin, GenerationMixin, EditingMixin, 
         self.play_active = None
         self.render_token = 0
         self.jobs = queue.Queue()
-        self.tasks = TaskRunner(root)  # экспорт и прочая тяжёлая работа — в фоновых потоках
+        self.tasks = TaskRunner(root)  # export and other heavy work — in background threads
         self._bg = {}
         self._bg_seq = 0
         self._loading = False
@@ -96,7 +96,7 @@ class App(CanvasMixin, MouseMixin, HistoryMixin, GenerationMixin, EditingMixin, 
         self.root.after(33, self._tick)
         root.protocol('WM_DELETE_WINDOW', self.on_close)
 
-    # ── переменные ──
+    # ── variables ──
     def _init_vars(self):
         D, S, B = tk.DoubleVar, tk.StringVar, tk.BooleanVar
         first = next(iter(STYLES))
@@ -172,7 +172,7 @@ class App(CanvasMixin, MouseMixin, HistoryMixin, GenerationMixin, EditingMixin, 
         self.v_bpm.trace_add('write', lambda *a: self._on_bpm())
         self.v_swing.trace_add('write', lambda *a: self._on_swing())
 
-    # ── тема ──
+    # ── theme ──
     def _palette(self):
         c = dict(THEMES[self.theme])
         acc = ACCENTS.get(self.accent, '#00d9ff')
@@ -293,7 +293,7 @@ class App(CanvasMixin, MouseMixin, HistoryMixin, GenerationMixin, EditingMixin, 
 
     def set_language(self, lang):
         if self.shell:
-            if not self.shell.set_language(lang):  # не сменили (идёт экспорт) — вернуть выбор на место
+            if not self.shell.set_language(lang):  # not switched (an export is running) — put the choice back
                 self.v_lang.set(i18n.LANG)
                 self.v_lang_name.set(LANGUAGES[i18n.LANG])
             return
@@ -301,7 +301,7 @@ class App(CanvasMixin, MouseMixin, HistoryMixin, GenerationMixin, EditingMixin, 
         save_prefs(self.prefs)
         messagebox.showinfo(APP_NAME, T('Язык сменится при следующем запуске программы.'))
 
-    # ── смена языка: окно строится заново, а песня, история, кэш и настройки переносятся ──
+    # ── language change: the window is rebuilt, and the song, history, cache and settings are carried over ──
     _STATE_ATTRS = ('song', 'project_path', 'undo_stack', 'redo_stack', 'cache', 'cache_seq', 'clipboard',
                     'sel_track', 'cursor', 'pps', 'comp_last', 'comp_history')
 
@@ -332,7 +332,7 @@ class App(CanvasMixin, MouseMixin, HistoryMixin, GenerationMixin, EditingMixin, 
         self.set_mode(st['mode'])
 
     def dispose(self):
-        """Закрыть окно без выхода из программы (при смене языка)."""
+        """Closes the window without quitting the app (on language change)."""
         self._disposed = True
         self.stop()
         if self._refresh_job:
@@ -344,7 +344,7 @@ class App(CanvasMixin, MouseMixin, HistoryMixin, GenerationMixin, EditingMixin, 
         self.tasks.close()
         self.root.destroy()
 
-    # ── виджеты-помощники ──
+    # ── widget helpers ──
     def _btn(self, parent, text, cmd, style='TButton', **kw):
         return ttk.Button(parent, text=text, command=cmd, style=style, takefocus=False, **kw)
 
@@ -398,7 +398,7 @@ class App(CanvasMixin, MouseMixin, HistoryMixin, GenerationMixin, EditingMixin, 
         self.menus.append(m)
         return m
 
-    # ── построение окна ──
+    # ── building the window ──
     def _build_ui(self):
         self._build_menubar()
         self._build_topbar()
@@ -408,7 +408,7 @@ class App(CanvasMixin, MouseMixin, HistoryMixin, GenerationMixin, EditingMixin, 
         self.lbl_status.pack(side='left')
         self.lbl_info = ttk.Label(status, style='Status.TLabel')
         self.lbl_info.pack(side='right')
-        # индикатор фоновых задач (экспорт и т.п.) — показывается, только пока что-то считается
+        # background task indicator (export, etc.) — shown only while something is being computed
         self.bg_box = ttk.Frame(status, style='Bg.TFrame')
         self.lbl_bg = ttk.Label(self.bg_box, style='Status.TLabel')
         self.lbl_bg.pack(side='left', padx=(0, 6))
@@ -437,6 +437,7 @@ class App(CanvasMixin, MouseMixin, HistoryMixin, GenerationMixin, EditingMixin, 
         f.add_command(label=T('✦ Компаньон: трек по описанию…   Ctrl+K'), command=self.open_companion)
         f.add_command(label=T('Сгенерировать новый трек   Ctrl+G'), command=self.generate)
         f.add_command(label=T('Открыть проект…   Ctrl+O'), command=self.open_project)
+        f.add_command(label=T('⬆ Импорт трека (MIDI, Dendy, Sega)…   Ctrl+I'), command=self.import_track)
         f.add_command(label=T('Сохранить проект   Ctrl+S'), command=self.save_project)
         f.add_command(label=T('Сохранить проект как…'), command=lambda: self.save_project(as_new=True))
         f.add_separator()
@@ -556,6 +557,16 @@ class App(CanvasMixin, MouseMixin, HistoryMixin, GenerationMixin, EditingMixin, 
         m.add_command(label=T('Открыть проект…'), command=self.open_project)
         mbtn['menu'] = m
         mbtn.pack(side='right', padx=4)
+        ibtn = ttk.Menubutton(top, text=T('⬆  Импорт'), takefocus=False)
+        im = self._menu(ibtn)
+        im.add_command(label=T('Импорт трека…   Ctrl+I'), command=self.import_track)
+        im.add_separator()
+        im.add_command(label=T('Проект 8-BIT FORGE (.json)…'), command=self.open_project)
+        im.add_command(label=T('MIDI (.mid) — и экспорт этой программы…'), command=self.import_track)
+        im.add_command(label=T('Dendy / NES — NSF, VGM…'), command=self.import_track)
+        im.add_command(label=T('Sega Mega Drive / Master System — VGM, VGZ…'), command=self.import_track)
+        ibtn['menu'] = im
+        ibtn.pack(side='right')
         self._btn(top, T('Сохранить'), self.save_project).pack(side='right')
         self._btn(top, T('✦  Компаньон'), self.open_companion, style='Accent.TButton').pack(side='right', padx=(0, 8))
 
@@ -651,11 +662,11 @@ class App(CanvasMixin, MouseMixin, HistoryMixin, GenerationMixin, EditingMixin, 
         ttk.Label(tb, text=T('Сетка')).pack(side='left', padx=(12, 4))
         c1 = ttk.Combobox(tb, state='readonly', width=6, takefocus=False)
         c1.pack(side='left')
-        translate_combo(c1, self.v_snap, list(SNAPS), self.lanes.focus_set)
+        translate_combo(c1, self.v_snap, list(SNAPS), lambda: self.lanes.focus_set())
         ttk.Label(tb, text=T('Нота')).pack(side='left', padx=(8, 4))
         c2 = ttk.Combobox(tb, state='readonly', width=6, takefocus=False)
         c2.pack(side='left')
-        translate_combo(c2, self.v_note_len, list(SNAPS), self.lanes.focus_set)
+        translate_combo(c2, self.v_note_len, list(SNAPS), lambda: self.lanes.focus_set())
         self.combos += [c1, c2]
         self._btn(tb, '⤢', self.zoom_fit, style='Small.TButton', width=3).pack(side='right')
         self._btn(tb, '+', lambda: self.zoom(1.25), style='Small.TButton', width=3).pack(side='right', padx=2)
@@ -706,7 +717,7 @@ class App(CanvasMixin, MouseMixin, HistoryMixin, GenerationMixin, EditingMixin, 
         self._btn(r1, '♻  Recreate another piece', self.recreate_selection, style='Accent.TButton').pack(side='right')
         cbm = ttk.Combobox(r1, state='readonly', width=16, takefocus=False)
         cbm.pack(side='right', padx=8)
-        translate_combo(cbm, self.v_recreate_mode, RECREATE_MODES, self.lanes.focus_set)
+        translate_combo(cbm, self.v_recreate_mode, RECREATE_MODES, lambda: self.lanes.focus_set())
         self.combos.append(cbm)
         r2 = ttk.Frame(sb)
         r2.pack(fill='x', pady=(6, 0))

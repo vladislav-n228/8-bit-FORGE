@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Модель Forge Action — битвы, боссы, погони и гонки."""
+"""The Forge Action model — battles, bosses, chases and races."""
 
 from scripts.models_of_ai.base_composer import AIComposer
 
@@ -8,5 +8,5 @@ ACTION_INFO = dict(name='Forge Action', icon='⚡', desc='битвы, боссы
 
 
 class ActionComposer(AIComposer):
-    """Forge Action: напор с первых тактов, припев на максимуме, брейкдаун перед финальным припевом."""
+    """Forge Action: drive from the first bars, the chorus at full power, a breakdown before the final chorus."""
     FORM = [('A', .75), ('B', .95), ('C', .55), ('B', 1.0)]

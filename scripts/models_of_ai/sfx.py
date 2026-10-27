@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Модель Forge SFX — звуковые эффекты: параметрический синтезатор в духе sfxr."""
+"""The Forge SFX model — sound effects: a parametric synthesizer in the spirit of sfxr."""
 
 import random
 
@@ -18,7 +18,7 @@ def _rr(r, a, b):
     return r.uniform(a, b)
 
 
-AI_SFX = {  # ключ: (название, основы слов, генератор параметров)
+AI_SFX = {  # key: (name, word stems, parameter generator)
     'jump': ('Прыжок', ('прыж', 'прыг', 'jump', 'подскок'),
              lambda r: dict(wave='square', duty=r.choice([.25, .5]), f0=_rr(r, 180, 320), f1=_rr(r, 520, 900),
                             curve=.6, dur=_rr(r, .16, .28), decay=1.5)),
@@ -111,7 +111,7 @@ def _sfx_dir(P, d):
     P['f0'], P['f1'] = f0, f1
 
 
-AI_SFX_MODS = [  # (основы, как назвать в ответе, что сделать с параметрами)
+AI_SFX_MODS = [  # (stems, what to call it in the reply, what to do with the parameters)
     (('высок', 'звонк', 'писк', 'тонк', '=high', 'higher', 'squeak', 'shrill', 'thin'), 'выше', lambda P: _sfx_pitch(P, 1.5)),
     (('низк', 'басов', 'глух', 'тяжел', 'глубок', '=low', 'lower', 'deep', 'bassy', 'heavy', 'muffled'), 'ниже', lambda P: _sfx_pitch(P, .6)),
     (('длинн', 'долг', 'протяж', '=long', 'longer', 'lengthy', 'drawn'), 'длиннее', lambda P: P.update(dur=P['dur'] * 1.6)),
@@ -136,7 +136,7 @@ AI_SFX_MODS = [  # (основы, как назвать в ответе, что 
 ]
 
 
-AI_SFX_PACKS = [  # набор звуков под тип игры
+AI_SFX_PACKS = [  # a sound pack for a type of game
     (('шутер', 'shooter', 'космическ', 'стрелял', 'shmup', 'shoot-em', 'space shooter'), ['laser', 'explosion', 'hit', 'powerup', 'alarm', 'death']),
     (('rpg', 'рпг', 'фэнтез', 'fantasy', 'подземел', 'данж', 'dungeon', 'adventure'), ['swing', 'magic', 'pickup', 'door', 'confirm', 'death']),
     (('интерфейс', '=ui', 'меню', 'кнопк', 'menu', 'interface', 'button', '=app'), ['select', 'confirm', 'error', 'pickup']),
@@ -149,7 +149,7 @@ AI_PACK_WORDS = ('набор', '=пак', 'pack', 'комплект', 'все з
 
 
 
-# Английские основы слов — звуки можно заказывать и по-английски.
+# English word stems — sounds can be ordered in English too.
 _EN_SFX = {
     'jump': ('=hop', 'hopping', 'leap'), 'coin': ('money', '=gold', 'gems', 'crystal', 'score', 'point'),
     'laser': ('gun', 'blaster', 'pew', 'zap', 'bullet', 'fire'), 'explosion': ('bomb', 'blast', 'grenade', 'kaboom'),
@@ -173,8 +173,8 @@ for _k, _extra in _EN_SFX.items():
     AI_SFX[_k] = (_label, _stems + _extra, _gen)
 
 def sfx_synth(P, sr=44100, rng=None):
-    """Один звук по параметрам: волна, скольжение высоты (кривая / ступени), арпеджио-скачки, вибрато,
-    примесь шума, суб-бас, огибающая (атака, удержание, спад), сглаживание. Возвращает моно float64."""
+    """One sound from parameters: waveform, pitch slide (curve / steps), arpeggio jumps, vibrato,
+    noise mix, sub-bass, envelope (attack, hold, decay), smoothing. Returns mono float64."""
     rng = rng if rng is not None else np.random.default_rng()
     dur = max(.02, float(P['dur']))
     n = int(dur * sr)
@@ -221,7 +221,7 @@ def sfx_synth(P, sr=44100, rng=None):
 
 
 def render_ai_sfx(P, seed, sr=44100):
-    """Звук целиком: повторы, эхо, ретро-хруст, нормализация → стерео float32."""
+    """The whole sound: repeats, echo, retro crunch, normalization → stereo float32."""
     rng = np.random.default_rng(seed & 0xFFFFFFFF)
     rep = int(P.get('rep', 1))
     if rep > 1:

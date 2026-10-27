@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Видео с визуализацией: кадры рисует numpy, текст — PIL, кодирует ffmpeg."""
+"""Video with a visualizer: frames are drawn by numpy, text by PIL, encoded by ffmpeg."""
 
 import math
 import subprocess
@@ -151,7 +151,7 @@ class VideoRenderer:
                 seg = np.pad(seg, (0, n - len(seg)))
             mag = np.abs(np.fft.rfft(seg * win))
             lv[i] = [20 * math.log10(mag[ix].mean() + 1e-9) for ix in self.band_idx]
-        # высокие частоты тише — частично нормализуем каждую полосу отдельно, чтобы правые столбики тоже «жили»
+        # high frequencies are quieter — partially normalize each band separately so the right-hand bars "live" too
         top = 0.45 * np.percentile(lv, 99.5) + 0.55 * np.percentile(lv, 99, axis=0)
         lv = np.clip((lv - (top - 40)) / 40, 0, 1)
         for i in range(1, self.n_frames):
@@ -262,7 +262,7 @@ class VideoRenderer:
         ys = ys / max(.3, float(np.abs(ys).max()))
         yy = h / 2 - ys * h * .42
         nxt = np.append(yy[1:], yy[-1])
-        lo, hi = np.minimum(yy, nxt), np.maximum(yy, nxt)  # соединяем соседние точки — сплошная линия
+        lo, hi = np.minimum(yy, nxt), np.maximum(yy, nxt)  # join neighbouring points — a solid line
         rows = np.arange(h)[:, None]
         box = img[y0:y1, x0:x1]
         _rect(img, x0, y0 + h // 2, x1, y0 + h // 2 + 1, self.accent, .25)

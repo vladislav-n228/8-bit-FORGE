@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Воспроизведение через winsound (Windows) или системный плеер."""
+"""Playback via winsound (Windows) or the system player."""
 
 import os
 import shutil
@@ -15,7 +15,7 @@ from scripts.audio.synth import write_wav
 
 
 class Player:
-    """Воспроизведение через winsound (Windows) или системный плеер."""
+    """Playback via winsound (Windows) or the system player."""
 
     def __init__(self):
         self.dir = tempfile.mkdtemp(prefix='8bitforge_')

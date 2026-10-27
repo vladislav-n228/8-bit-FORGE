@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Общий композитор моделей Melody / Ambient / Action: форма → гармония → мотивы → фразы."""
+"""Shared composer of the Melody / Ambient / Action models: form → harmony → motifs → phrases."""
 
 import random
 
@@ -16,8 +16,8 @@ def _onsets(rhythm):
 
 
 class AIComposer:
-    """Общий композитор моделей Melody / Ambient / Action: форма → гармония → мотивы → фразы → аранжировка.
-    Модель-наследник задаёт FORM (части и их энергию) и AMBIENT (дышащая фоновая подача)."""
+    """Shared composer of the Melody / Ambient / Action models: form → harmony → motifs → phrases → arrangement.
+    A subclass model sets FORM (sections and their energy) and AMBIENT (a breathing background delivery)."""
     FORM = [('A', .5), ('B', .8), ('A', .55), ('B', .88), ('C', .45), ('B', .95)]
     AMBIENT = False
 
@@ -72,7 +72,7 @@ class AIComposer:
 
 
     def _form(self, bars, intro_ok=True, outro_ok=True):
-        """Форма трека: [(часть, тактов, энергия 0..1)]. I — вступление, A — куплет, B — припев, C — бридж, O — концовка."""
+        """Track form: [(section, bars, energy 0..1)]. I — intro, A — verse, B — chorus, C — bridge, O — ending."""
         seq = self.FORM
         intro = 0 if (not intro_ok or bars < 12) else 2 if bars < 40 else 4
         outro = 0 if (not outro_ok or bars < 8) else 1 if bars < 24 else 2
@@ -85,7 +85,7 @@ class AIComposer:
             if i >= len(seq):
                 e = min(1.0, e + .05)
             if i == 0 and n == body and not self.AMBIENT:
-                name, e = 'B', .8  # короткий трек — сразу запоминающийся «хук»
+                name, e = 'B', .8  # a short track — a catchy "hook" right away
             form.append((name, n, e))
             body -= n
             i += 1
@@ -93,7 +93,7 @@ class AIComposer:
             form.append(('O', outro, .35))
         return form
 
-    # ── гармония ──
+    # ── harmony ──
     def _chords(self):
         P, rng, sg = self.P, self.rng, self.song
         pr = AI_PROGS[AI_FAMILY.get(sg.scale, sg.scale)]
@@ -105,14 +105,14 @@ class AIComposer:
             cl = 1 if len(pg) >= 12 else P['chord_len']
             chords += [pg[(j // cl) % len(pg)] for j in range(s['nb'])]
         cad = pr['cad']
-        for s in self.secs:  # перед припевом — доминанта, чтобы припев «распахнулся»
+        for s in self.secs:  # a dominant before the chorus so the chorus "opens up"
             nxt = s['next']
             if nxt and nxt['name'] == 'B' and s['name'] in ('I', 'A', 'C') and s['nb'] >= 2:
                 chords[s['b0'] + s['nb'] - 1] = cad
         n = len(chords)
         if P['loop']:
             if n >= 2:
-                chords[-1] = cad  # конец ведёт обратно в начало — петля без шва
+                chords[-1] = cad  # the end leads back to the start — a seamless loop
         else:
             outro = next((s for s in self.secs if s['name'] == 'O'), None)
             if outro:
@@ -126,7 +126,7 @@ class AIComposer:
                     chords[-2] = cad
         sg.chords = chords
 
-    # ── мелодия: мотив → фраза → период ──
+    # ── melody: motif → phrase → period ──
     def _level(self, e):
         if self.AMBIENT:
             return 'calm' if self.P['density'] < .55 else 'medium'
@@ -142,7 +142,7 @@ class AIComposer:
                 step = rng.choice((3, 4))
                 d = -1
             elif len(c) >= 2 and abs(c[-1] - c[-2]) >= 2:
-                step = -1 if c[-1] > c[-2] else 1  # после скачка — шаг назад, «заполнение»
+                step = -1 if c[-1] > c[-2] else 1  # after a leap — a step back, "filling in"
             else:
                 if shape == 'arch' and i >= (n + 1) // 2:
                     d = -1
@@ -173,7 +173,7 @@ class AIComposer:
         else:
             c2 = self._contour(len(_onsets(r2)), rng.choice(shapes))
         h = len(c1) // 2
-        c3 = [v + (2 if i >= h else 1 if i else 0) for i, v in enumerate(c1)]  # развитие: тема поднимается
+        c3 = [v + (2 if i >= h else 1 if i else 0) for i, v in enumerate(c1)]  # development: the theme rises
         m = self.motifs[name] = dict(r1=r1, c1=c1, r2=r2, c2=c2, c3=c3, lvl=lvl)
         return m
 
@@ -199,7 +199,7 @@ class AIComposer:
             ln = gap if leg >= .8 or gap <= 1 else max(1, int(round(gap * leg)))
             p = pool[int(clamp(ai + contour[k % len(contour)], 0, len(pool) - 1))]
             pos = b0 + o
-            if o % 4 == 0 or ln >= 4:  # на сильных долях и долгих нотах — звук аккорда
+            if o % 4 == 0 or ln >= 4:  # on strong beats and long notes — a chord tone
                 cts = chord_pitches(sg, chord_at(sg, pos), pool[0], pool[-1])
                 if cts:
                     p = nearest(cts, p)
@@ -212,7 +212,7 @@ class AIComposer:
         return out
 
     def _cadence(self, bar, center, vel, last, final, lvl):
-        """Конец фразы: поступенный подход к звуку аккорда; в финале — к тонике."""
+        """End of a phrase: a stepwise approach to a chord tone; in the finale — to the tonic."""
         sg, rng, pool = self.song, self.rng, self.pool
         b0 = bar * 16
         pcs = chord_pcs(sg, chord_at(sg, b0))
@@ -255,7 +255,7 @@ class AIComposer:
                 ph, k = divmod(j, 4)
                 plen = min(4, s['nb'] - ph * 4)
                 if self.AMBIENT and ph % 2 == 1:
-                    continue  # в эмбиенте мелодия дышит: через фразу отвечает арпеджио
+                    continue  # in ambient the melody breathes: every other phrase the arpeggio answers
                 if plen >= 2 and k == plen - 1:
                     final = (j == s['nb'] - 1 and s['final']) or ph % 2 == 1
                     notes = self._cadence(bar, center, vel, last, final, m['lvl'])
@@ -275,7 +275,7 @@ class AIComposer:
         for s in self.secs:
             a, b = s['b0'] * 16, (s['b0'] + s['nb']) * 16
             name = s['name']
-            if name == 'B' and not self.AMBIENT:  # голос поёт тему припева
+            if name == 'B' and not self.AMBIENT:  # the voice sings the chorus theme
                 src = [n for n in lead if a <= n.s < b]
                 part = []
                 for n in src:
@@ -297,8 +297,8 @@ class AIComposer:
                 if part:
                     prev = part[-1].p
                 for n in src:
-                    n.v *= .7  # лид уступает место голосу
-            elif name in ('A', 'B', 'C') and (self.AMBIENT or s['e'] >= .35):  # тихий бэк-вокал / хор
+                    n.v *= .7  # the lead makes room for the voice
+            elif name in ('A', 'B', 'C') and (self.AMBIENT or s['e'] >= .35):  # quiet backing vocals / choir
                 span = 32 if self.AMBIENT else 16
                 for pos in range(a, b, span):
                     tones = chord_pitches(sg, chord_at(sg, pos), lo, hi - 4) or [lo + 5]
@@ -309,7 +309,7 @@ class AIComposer:
                 out.append(Note(a, min(16, b - a), nearest(tones, prev), .7))
         return out
 
-    # ── аккомпанемент ──
+    # ── accompaniment ──
     def _voicing(self, pos, prev, lo=55, hi=72):
         tones = chord_pitches(self.song, chord_at(self.song, pos), lo, hi)
         if len(tones) < 2:
@@ -364,7 +364,7 @@ class AIComposer:
                     cur = cand[1] if cand[0] == cur and len(cand) > 1 and rng.random() < .5 else cand[0]
                     out.append(Note(pos, min(8, b - pos), cur, .5))
                 prev = None
-            else:  # долгие аккорды с плавным голосоведением
+            else:  # long chords with smooth voice leading
                 bar, end = s['b0'], s['b0'] + s['nb']
                 while bar < end:
                     span = 1
@@ -398,7 +398,7 @@ class AIComposer:
                     if fill and off >= 12:
                         continue
                     out.append(Note(b0 + off, ln, comp._bass_pitch(role, b0 + off), .9 if off % 4 == 0 else .78))
-                if fill:  # подход к следующему аккорду: ступень лада ниже + хроматика
+                if fill:  # approach to the next chord: a scale step below + chromaticism
                     nxt = comp._bass_pitch('r', b0 + 16)
                     q = next((p for p in range(nxt - 1, nxt - 5, -1) if p % 12 in scale_pcs), nxt - 2)
                     out += [Note(b0 + 12, 2, q, .8), Note(b0 + 14, 2, nxt + 2 if q == nxt - 1 else nxt - 1, .85)]
@@ -424,7 +424,7 @@ class AIComposer:
             rate = 1 if (e >= .75 and not amb) else 2
             vel = .5 + .15 * e
             for j in range(s['nb']):
-                answer = amb and (j // 4) % 2 == 1  # отвечает на паузу мелодии
+                answer = amb and (j // 4) % 2 == 1  # answers a rest in the melody
                 for pos in range(a + j * 16, a + j * 16 + 16, rate):
                     tones = chord_pitches(sg, chord_at(sg, pos), 72, 91)[:4] or [76]
                     n = len(tones)
@@ -454,7 +454,7 @@ class AIComposer:
             if name == 'O':
                 out += [Note(a, 1, 49, .85), Note(a, 1, 36, 1.0)]
                 continue
-            if name == 'I':  # вступление: хэты нарастают, в конце — дробь малого
+            if name == 'I':  # intro: hi-hats build up, a snare roll at the end
                 total = s['nb'] * 16
                 for j in range(s['nb']):
                     b0 = a + j * 16
@@ -483,12 +483,12 @@ class AIComposer:
                 for o, ch in enumerate(G['h']):
                     if ch != '.' and not (soft and o % 4):
                         hits[(o, 46 if ch == 'o' else 42)] = .48 if o % 4 == 0 else .34
-                if e >= .85 and G['h'].count('x') == 8:  # пик энергии — 16-е хэты
+                if e >= .85 and G['h'].count('x') == 8:  # energy peak — 16th-note hi-hats
                     for o in range(1, 16, 2):
                         hits[(o, 42)] = .24
                 if not amb and ((j == 0 and (name == 'B' or e >= .7)) or (j and j % 8 == 0 and e >= .6)):
                     hits[(0, 49)] = .75
-                if not amb and e >= .45 and (j % 4 == 3 or j == s['nb'] - 1):  # сбивка в конце фразы
+                if not amb and e >= .45 and (j % 4 == 3 or j == s['nb'] - 1):  # a fill at the end of the phrase
                     big = j == s['nb'] - 1 and nxt is not None and e >= .6
                     st = 8 if big else 12
                     hits = {k: v for k, v in hits.items() if k[0] < st}
@@ -519,7 +519,7 @@ class AIComposer:
 
 
 def _ai_params(song, plan, intro=False, outro=False, avg_e=.6):
-    """Параметры в формате генератора — чтобы в редакторе работали «Сгенерировать» и ♻ Recreate."""
+    """Parameters in the generator's format — so that "Generate" and ♻ Recreate work in the editor."""
     bass = {'root': 'Корень четвертями', 'whole': 'Корень четвертями', 'pulse8': 'Драйв восьмыми',
             'octave8': 'Октавы восьмыми', 'rootfifth': 'Корень-квинта', 'synco': 'Синкопы', 'walk': 'Шагающий',
             'gallop': 'Пульс 16-ми'}

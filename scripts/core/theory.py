@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Музыкальная теория и мелкие помощники: аккорды, лады, ноты, цвета, время."""
+"""Music theory and small helpers: chords, scales, notes, colors, time."""
 
 import numpy as np
 

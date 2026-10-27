@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Окно «✦ Компаньон»: трек по описанию по ключевым словам (старый помощник)."""
+"""The "✦ Companion" window: a track from a description by keywords (the old assistant)."""
 
 import random
 import tkinter as tk
@@ -18,7 +18,7 @@ from scripts.ui.widgets import translate_combo
 
 
 class CompanionMixin:
-    """Окно «✦ Компаньон»: трек по описанию по ключевым словам (старый помощник)."""
+    """The "✦ Companion" window: a track from a description by keywords (the old assistant)."""
 
     def open_companion(self):
         if self.comp_win and self.comp_win.winfo_exists():
@@ -193,7 +193,7 @@ class CompanionMixin:
             self.play(0, self.song.total_steps, start=0)
 
     def _sync_generator_vars(self, p, seed):
-        """Левая панель показывает настройки, с которыми сочинён трек — «Сгенерировать» продолжит в том же духе."""
+        """The left panel shows the settings the track was composed with — "Generate" will continue in the same spirit."""
         self.v_style.set(p['style'])
         self.v_key.set(NOTE_NAMES[p['key']])
         self.v_scale.set(p['scale'])

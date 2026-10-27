@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Модель Forge Jingle — короткие законченные джинглы."""
+"""The Forge Jingle model — short, complete jingles."""
 
 import random
 
@@ -13,7 +13,7 @@ from scripts.music.composer import Composer
 JINGLE_INFO = dict(name='Forge Jingle', icon='★', desc='короткие джинглы 1–10 с: победа, game over, старт уровня')
 
 
-# Ноты: (шаг 1/16, длина, полутоны от тоники); аккорды — по полтакта (ступени лада).
+# Notes: (1/16 step, length, semitones from the tonic); chords — every half bar (scale degrees).
 AI_JINGLES = {
     'victory': dict(minor=False, bpm=150, kind='fanfare', tpls=[
         ([(0, 2, 0), (2, 2, 4), (4, 2, 7), (6, 6, 12), (12, 2, 9), (14, 2, 11), (16, 14, 12)], [0, 4, 0, 0]),
@@ -64,7 +64,7 @@ def _ai_jingle(plan, seed):
     tpl, ch8 = rng.choice(J['tpls'])
     tpl = [list(x) for x in tpl]
     if kind == 'fanfare' and rng.random() < .35 and tpl[-1][2] % 12 == 0:
-        tpl[-1][2] += 4  # иногда финал на терции — звучит светлее
+        tpl[-1][2] += 4  # sometimes the finale lands on the third — sounds brighter
     L = max(s + ln for s, ln, _ in tpl)
     bars = max(1, -(-L // 16))
     total = bars * 16
@@ -126,5 +126,5 @@ def _ai_jingle(plan, seed):
         t.notes = Composer.clean(t.notes, 0, total)
     song.params = _ai_params(song, plan, outro=True)
     if secs and abs(total * song.step_dur - secs) < .05:
-        song.params['exact_sec'] = secs  # ровно в заданную длину: хвост обрезается с мягким затуханием
+        song.params['exact_sec'] = secs  # exactly to the requested length: the tail is cut with a soft fade
     return song

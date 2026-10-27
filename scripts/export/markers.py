@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Метки битов для монтажа (DaVinci, Audacity, CSV, список)."""
+"""Beat markers for video editing (DaVinci, Audacity, CSV, list)."""
 
 from scripts.core.constants import APP_NAME
 from scripts.core.i18n import T

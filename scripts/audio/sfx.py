@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Классический генератор 8-битных звуковых эффектов (окно «Звуковые эффекты»)."""
+"""Classic 8-bit sound effect generator (the "Sound effects" window)."""
 
 import random
 
@@ -86,7 +86,7 @@ class _SfxRng(random.Random):
 
 
 def render_sfx(kind, seed, pitch=1.0, length=1.0, chip='nes', crush=True, sr=44100):
-    """Возвращает стерео float32. Каждый seed — новая вариация того же типа звука."""
+    """Returns stereo float32. Every seed is a new variation of the same kind of sound."""
     r = _SfxRng(seed)
     p = pitch * r.uniform(.88, 1.14)
     L = length * r.uniform(.88, 1.14)

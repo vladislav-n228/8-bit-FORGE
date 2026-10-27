@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Геометрия и отрисовка дорожек, пиано-ролла и линейки; режимы и выбор трека."""
+"""Geometry and drawing of the tracks, piano roll and ruler; modes and track selection."""
 
 import math
 
@@ -11,7 +11,7 @@ from scripts.ui.style import FONT_B, FONT_S, FONT_SB, HEAD_W, LANE_H, PMAX, PMIN
 
 
 class CanvasMixin:
-    """Геометрия и отрисовка дорожек, пиано-ролла и линейки; режимы и выбор трека."""
+    """Geometry and drawing of the tracks, piano roll and ruler; modes and track selection."""
 
     def cur_track(self):
         return self.song.tracks[self.sel_track]

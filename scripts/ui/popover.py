@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Всплывающие меню чат-студии: скруглённая карточка с мягкой тенью, заголовки разделов,
-пункты с иконками, описаниями и галочкой, плавная подсветка, появление с затуханием и сдвигом.
-Управление мышью и клавиатурой (↑ ↓ Enter Esc), закрывается кликом мимо."""
+"""Chat studio pop-up menus: a rounded card with a soft shadow, section headings,
+items with icons, descriptions and a tick, smooth highlighting, appearing with a fade and a slide.
+Mouse and keyboard control (↑ ↓ Enter Esc), closes on a click outside."""
 
 import time
 import tkinter as tk
@@ -10,19 +10,21 @@ from scripts.core.theory import blend
 from scripts.ui.anim import ease_out
 from scripts.ui.graphics import round_rect
 
-KEY = '#010203'  # «прозрачный» цвет окна: всё, что им залито, не видно — так получаются скруглённые углы
+KEY = '#010203'  # the window's "transparent" color: anything filled with it is invisible — that's how rounded corners are made
 
 
 class Popover:
-    """sections: [dict(title=None|str, cols=1, items=[dict(label, icon='', desc='', checked=False, cmd)])]."""
+    """sections: [dict(title=None|str, cols=1, items=[dict(label, icon='', desc='', checked=False, cmd, keep=False)])].
+    An item with keep=True doesn't close the menu: after cmd the menu is redrawn from rebuild() — that's how ticks work."""
 
-    def __init__(self, chat, key, anchor, sections, up=True, align='left', min_w=220):
+    def __init__(self, chat, key, anchor, sections, up=True, align='left', min_w=220, rebuild=None, on_close=None):
         self.chat, self.key, self.k = chat, key, chat.k
         self.closing = False
+        self.min_w, self.rebuild, self.on_close = min_w, rebuild, on_close
         c, k = chat.c, chat.k
         self.c = c
         win = self.win = tk.Toplevel(chat.win)
-        win.overrideredirect(True)  # без transient(): на Windows окно без рамки с ним просто не рисуется
+        win.overrideredirect(True)  # no transient(): on Windows a borderless window with it simply isn't drawn
         win.configure(bg=KEY)
         for attr, val in (('-transparentcolor', KEY), ('-alpha', 0.0)):
             try:
@@ -31,16 +33,16 @@ class Popover:
                 pass
         cv = self.cv = tk.Canvas(win, bg=KEY, highlightthickness=0, bd=0)
         cv.pack(fill='both', expand=True)
-        self.rows = []  # (x0, y0, x1, y1, пункт, id подсветки, базовый цвет)
+        self.rows = []  # (x0, y0, x1, y1, item, highlight id, base color)
         self.card = blend(c['pill'], c['fg'], .03) if chat.theme == 'dark' else c['pill']
         W, H = self._layout(sections, min_w)
-        # положение: над / под якорем, по левому или правому краю
+        # position: above / below the anchor, aligned to the left or right edge
         ax0, ay0, ax1, ay1 = anchor
         m, gap = self.m, k * 8
         rx, ry = chat.win.winfo_rootx(), chat.win.winfo_rooty()
         room_up, room_down = ay0 - ry, ry + chat.win.winfo_height() - ay1
         need = H - 2 * m + gap
-        if up and room_up < need and room_down > room_up:  # не влезает — открываем в другую сторону
+        if up and room_up < need and room_down > room_up:  # doesn't fit — open in the other direction
             up = False
         elif not up and room_down < need and room_up > room_down:
             up = True
@@ -49,6 +51,7 @@ class Popover:
         x = max(rx - m, min(x, rx + chat.win.winfo_width() - W + m))
         y = max(ry - m, min(y, ry + chat.win.winfo_height() - H + m))
         self.x, self.y = int(x), int(y)
+        self.W, self.H, self.up = W, H, up
         self._draw(W, H)
         win.geometry(f'{W}x{H}+{self.x}+{self.y + int(k * (10 if up else -10))}')
         cv.bind('<Motion>', self._on_motion)
@@ -65,10 +68,10 @@ class Popover:
         dy = k * (10 if up else -10)
         chat.anim.tween(('pop', id(self)), .18, lambda t: self._place(t, dy))
 
-    # ── раскладка ──
+    # ── layout ──
     def _layout(self, sections, min_w):
         k, F = self.k, self.chat.F
-        self.m, self.p = k * 10, k * 8  # поле под тень и внутренний отступ
+        self.m, self.p = k * 10, k * 8  # margin for the shadow and inner padding
         self.secs = []
         content_w, h = min_w * k, 0
         for si, sec in enumerate(sections):
@@ -94,7 +97,7 @@ class Popover:
         under = chat._bg_at(self.x - chat.win.winfo_rootx() + W / 2, self.y - chat.win.winfo_rooty() + H / 2)
         shade = '#000000' if chat.theme == 'dark' else '#8090a8'
         r = k * 16
-        for grow, a in ((k * 6, .10), (k * 4, .18), (k * 2, .28)):  # мягкая тень в несколько слоёв
+        for grow, a in ((k * 6, .10), (k * 4, .18), (k * 2, .28)):  # soft shadow in several layers
             round_rect(cv, m - grow, m - grow + k * 3, W - m + grow, H - m + grow + k * 3, r + grow,
                        fill=blend(under, shade, a), outline='')
         round_rect(cv, m, m, W - m, H - m, r, fill=self.card, outline=c['pill_border'])
@@ -134,7 +137,7 @@ class Popover:
             cv.create_text(x + w - k * 20, cy, text='✓', font=F('msg_b'), fill=c['accent_text'])
         self.rows.append((x, y, x + w, y + h, it, hl, base))
 
-    # ── поведение ──
+    # ── behaviour ──
     def _place(self, t, dy):
         if self.closing or not self.win.winfo_exists():
             return
@@ -177,9 +180,28 @@ class Popover:
         if i is None or self.closing:
             return
         it = self.rows[i][4]
+        if it.get('keep'):
+            if it.get('cmd'):
+                it['cmd']()
+            if self.rebuild:
+                self._redraw(self.rebuild(), i)
+            return
         self.close()
         if it.get('cmd'):
             self.chat.win.after_idle(it['cmd'])
+
+    def _redraw(self, sections, hover=None):
+        """Redraws in place (without the appearance animation) — after a click on a tick."""
+        self.cv.delete('all')
+        self.rows, self.hover = [], None
+        W, H = self._layout(sections, self.min_w)
+        if self.up:  # menu above the button — the bottom edge stays in place
+            self.y += self.H - H
+        self.W, self.H = W, H
+        self._draw(W, H)
+        self.win.geometry(f'{W}x{H}+{self.x}+{self.y}')
+        if hover is not None and hover < len(self.rows):
+            self._set_hover(hover)
 
     def _check_focus(self):
         try:
@@ -193,6 +215,8 @@ class Popover:
         if self.closing:
             return
         self.closing = True
+        if self.on_close:
+            self.on_close()
         self.chat._pop_closed = (self.key, time.perf_counter())
         if self.chat._popover is self:
             self.chat._popover = None

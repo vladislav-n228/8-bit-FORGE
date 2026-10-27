@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Реестр моделей Forge: описания для интерфейса и композиторы."""
+"""Registry of Forge models: descriptions for the UI and the composers."""
 
 from scripts.models_of_ai.action import ACTION_INFO, ActionComposer
 from scripts.models_of_ai.ambient import AMBIENT_INFO, AmbientComposer

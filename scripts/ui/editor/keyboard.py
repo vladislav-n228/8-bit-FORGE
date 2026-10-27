@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Горячие клавиши."""
+"""Keyboard shortcuts."""
 
 import sys
 import tkinter as tk
@@ -10,7 +10,7 @@ from scripts.core.theory import clamp
 
 
 class KeyboardMixin:
-    """Горячие клавиши."""
+    """Keyboard shortcuts."""
 
     def _bind_keys(self):
         self.root.bind('<KeyPress>', self._on_key)
@@ -29,7 +29,7 @@ class KeyboardMixin:
             if typing and ch in ('c', 'v', 'a', 'x', 'z', 'y'):
                 return
             act = {'z': self.redo if shift else self.undo, 'y': self.redo, 's': self.save_project,
-                   'o': self.open_project, 'e': self.export_wav, 'g': self.generate, 'c': self.op_copy,
+                   'o': self.open_project, 'i': self.import_track, 'e': self.export_wav, 'g': self.generate, 'c': self.op_copy,
                    'v': self.op_paste, 'd': self.op_duplicate, 'a': self.op_select_all,
                    'k': self.open_companion}.get(ch)
             if act:

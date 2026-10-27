@@ -1,1 +1,1 @@
-"""Композиция ручного режима: генератор по стилю, «Компаньон», структура для видео."""
+"""Manual mode composition: the style generator, the "Companion", structure for video."""

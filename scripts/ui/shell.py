@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Связывает окна: стартовый экран, чат-студию и ручной редактор."""
+"""Connects the windows: start screen, chat studio and manual editor."""
 
 import tkinter as tk
 from tkinter import messagebox
@@ -16,7 +16,7 @@ from scripts.ui.launcher import Launcher
 
 
 class Shell:
-    """Связывает окна: стартовый экран, чат-студию и ручной редактор."""
+    """Connects the windows: start screen, chat studio and manual editor."""
 
     def __init__(self, root):
         self.root = root
@@ -24,9 +24,9 @@ class Shell:
         self.k = max(1.0, root.winfo_fpixels('1i') / 96.0)
         self.app = self.chat = None
         root.protocol('WM_DELETE_WINDOW', self.quit)
-        set_app_icon(root)  # True внутри — иконка достаётся и всем будущим окнам
+        set_app_icon(root)  # True inside — the icon is also given to all future windows
         self.launcher = Launcher(root, self)
-        warm_up_processes()  # процессы для рендера стартуют заранее, пока пользователь выбирает режим
+        warm_up_processes()  # render processes start in advance while the user picks a mode
 
     def center(self, win, w, h):
         sw, sh = win.winfo_screenwidth(), win.winfo_screenheight()
@@ -69,6 +69,11 @@ class Shell:
             self.app.load_external_song(song, label)
         self._show(self.app.root)
 
+    def import_track(self):
+        """From the start screen: open the editor and immediately pick a file to import."""
+        self.open_manual()
+        self.app.root.after(50, self.app.import_track)
+
     def set_theme(self, name):
         self.prefs['theme'] = name
         save_prefs(self.prefs)
@@ -76,7 +81,7 @@ class Shell:
             self.app.set_theme(name)
 
     def set_language(self, lang):
-        """Сменить язык на лету: окна перестраиваются, песня, история, кэш и настройки переносятся."""
+        """Switches the language on the fly: the windows are rebuilt, the song, history, cache and settings are carried over."""
         if lang == i18n.LANG or lang not in LANGUAGES:
             return False
         if sum(x.tasks.active for x in (self.app, self.chat) if x):

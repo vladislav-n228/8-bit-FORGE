@@ -1,1 +1,1 @@
-"""Экспорт для монтажа: метки битов и видео."""
+"""Export for video editing: beat markers and video."""

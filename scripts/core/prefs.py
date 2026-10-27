@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Настройки программы (~/.8bit_forge_prefs.json)."""
+"""App settings (~/.8bit_forge_prefs.json)."""
 
 import json
 

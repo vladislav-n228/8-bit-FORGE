@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Анимации для холста Tk: плавные переходы (твины), покадровые эффекты и пиксельная «пыль» на фоне."""
+"""Animations for the Tk canvas: smooth transitions (tweens), per-frame effects and pixel "dust" in the background."""
 
 import math
 import random
@@ -19,16 +19,16 @@ def ease_in_out(t):
 
 
 def ease_back(t):
-    """С лёгким «перелётом» в конце — для пружинистых появлений."""
+    """With a slight "overshoot" at the end — for springy appearances."""
     c = 1.70158
     return 1 + (c + 1) * (t - 1) ** 3 + c * (t - 1) ** 2
 
 
 class Animator:
-    """Один общий таймер ~60 кадров/с.
-    tween(key, dur, fn) — fn(t) каждый кадр, t идёт от 0 до 1 (уже сглаженное);
-    loop(key, fn) — fn(dt, now) каждый кадр, пока не вернёт False.
-    Новый твин с тем же ключом заменяет старый. Когда анимаций нет, таймер спит."""
+    """One shared timer at ~60 frames/s.
+    tween(key, dur, fn) — fn(t) every frame, t goes from 0 to 1 (already eased);
+    loop(key, fn) — fn(dt, now) every frame until it returns False.
+    A new tween with the same key replaces the old one. When there are no animations, the timer sleeps."""
     FRAME_MS = 16
 
     def __init__(self, widget):
@@ -55,7 +55,7 @@ class Animator:
         self.loops.pop(key, None)
 
     def stop(self):
-        """Остановить все анимации (окно закрывается)."""
+        """Stops all animations (the window is closing)."""
         self.tweens.clear()
         self.loops.clear()
         if self._job is not None:
@@ -113,7 +113,7 @@ class Animator:
 
 
 def collect_colors(cv, items):
-    """Текущие цвета (заливка, контур) элементов холста — чтобы плавно проявлять / гасить их."""
+    """Current colors (fill, outline) of canvas items — to fade them in / out smoothly."""
     out = []
     for it in items:
         for opt in ('fill', 'outline'):
@@ -127,14 +127,14 @@ def collect_colors(cv, items):
 
 
 def tint(cv, colors, bg, t):
-    """t = 0 — цвета растворены в фоне, t = 1 — исходные. bg — цвет или словарь {элемент: цвет фона под ним}."""
+    """t = 0 — colors dissolved into the background, t = 1 — the original ones. bg is a color or a dict {item: background color under it}."""
     for it, opt, col in colors:
         cv.itemconfigure(it, **{opt: blend(bg.get(it, '#000000') if isinstance(bg, dict) else bg, col, t)})
 
 
 class PixelDust:
-    """Пиксельная «пыль»: квадратики медленно всплывают и покачиваются — живой фон в духе 8-бит.
-    energy (0..1) ускоряет и проявляет их, пока модель сочиняет."""
+    """Pixel "dust": little squares slowly float up and sway — a living 8-bit style background.
+    energy (0..1) speeds them up and makes them more visible while the model is composing."""
 
     def __init__(self, cv, n=38):
         self.cv, self.n = cv, n
@@ -150,7 +150,7 @@ class PixelDust:
         self._shade = -1
 
     def build(self, W, H, colors, bg, k):
-        """Создать квадратики заново (после перерисовки окна) — сразу над фоновой картинкой."""
+        """Recreates the squares (after the window is redrawn) — right above the background image."""
         self.W, self.H, self.k, self.colors, self.bg = W, H, k, colors, bg
         cv = self.cv
         self.items = []

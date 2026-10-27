@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Для видео: точная длительность, вступление, концовка, дроп."""
+"""For video: exact duration, intro, ending, drop."""
 
 from scripts.core.constants import RANGES
 from scripts.core.model import Note
@@ -20,7 +20,7 @@ def fmt_bpm(b):
 
 
 def exact_fit(seconds, bpm_hint, lo=60, hi=220):
-    """Подбирает число тактов и дробный темп, чтобы трек длился ровно seconds."""
+    """Picks the number of bars and a fractional tempo so the track lasts exactly seconds."""
     est = seconds * bpm_hint / 240.0
     best = None
     for bars in range(max(2, int(est) - 8), int(est) + 9):
@@ -51,7 +51,7 @@ def drop_step_for(song, sec):
 
 
 def apply_structure(song, intro=False, outro=False, drop_step=None):
-    """Вступление (нарастание), дроп в нужной точке и концовка с финальным аккордом."""
+    """Intro (build-up), a drop at the right point and an ending with a final chord."""
     total = song.total_steps
     by = {t.kind: t for t in song.tracks}
     drums = by.get('drums')
@@ -77,7 +77,7 @@ def apply_structure(song, intro=False, outro=False, drop_step=None):
                     continue
                 drums.notes.append(Note(s, 1, 38, .3 + .65 * (s - a) / bl))
         for t in song.tracks:
-            _clear(t, d - 2, d)  # короткая пауза перед дропом
+            _clear(t, d - 2, d)  # a short pause before the drop
         if has_drums:
             drums.notes = [n for n in drums.notes if not (n.s == d and n.p in (36, 49))]
             drums.notes += [Note(d, 1, 49, .95), Note(d, 1, 36, 1.0)]

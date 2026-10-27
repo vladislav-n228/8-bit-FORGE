@@ -1,1 +1,1 @@
-"""Звук: синтез, плеер, громкость, ffmpeg, классические SFX."""
+"""Sound: synthesis, player, loudness, ffmpeg, classic SFX."""

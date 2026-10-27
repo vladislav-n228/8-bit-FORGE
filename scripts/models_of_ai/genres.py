@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Жанры-рецепты: темп, лады, грув, бас, гармония, звуки, характер и ключевые слова."""
+"""Genre recipes: tempo, scales, groove, bass, harmony, sounds, character and keywords."""
 
 _NES = ('NES · Лид 25%', 'NES · Тонкий 12.5%', 'NES · Треугольный бас', 'NES · Арпеджио-блип')
 
@@ -8,8 +8,8 @@ _SEGA = ('Sega · FM брасс', 'Sega · FM э-пиано', 'Sega · FM слэ
 
 
 def _genre(style, chip, bpm, scales, groove, bass, harm, arp, sounds, feat, kw, titles, **extra):
-    """Жанр = рецепт: темп, лады, грув, бас, гармония (куплет, припев), арпеджио (узор, когда), звуки,
-    «характер» (валентность, энергия, мрачность, эпичность, мечтательность), ключевые слова, названия."""
+    """Genre = recipe: tempo, scales, groove, bass, harmony (verse, chorus), arpeggio (pattern, when), sounds,
+    "character" (valence, energy, darkness, epicness, dreaminess), keywords, titles."""
     g = dict(style=style, chip=chip, bpm=bpm, scales=scales, groove=groove, bass=bass, harm=harm, arp=arp,
              sounds=sounds, feat=dict(zip(('val', 'en', 'dark', 'epic', 'dream'), feat)), kw=kw, titles=titles,
              density=.6, complexity=.5, legato=.85, swing=0.0, echo=0.0, vowel='а', kit=None, chord_len=1,
@@ -172,7 +172,7 @@ AI_DEFAULT_GENRES = {'melody': ['Приключение', 'Главное мен
                      'jingle': ['Победа / фанфары', 'Приключение']}
 
 
-# Английские ключевые слова жанров — запрос можно писать и по-английски.
+# English genre keywords — requests can be written in English too.
 _EN_KW = {
     'Приключение': ('journey', 'travel', '=hero', 'forest', 'woods', 'field', 'quest', 'island', 'platformer',
                     'explor', '=level', 'stage'),

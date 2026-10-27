@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Сборка трека ручного режима по настройкам генератора."""
+"""Builds a manual-mode track from the generator settings."""
 
 import random
 

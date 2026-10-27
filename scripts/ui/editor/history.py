@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""История действий: ◀ Назад / Вперёд ▶."""
+"""Action history: ◀ Back / Forward ▶."""
 
 import copy
 import time
@@ -9,7 +9,7 @@ from scripts.core.theory import clamp
 
 
 class HistoryMixin:
-    """История действий: ◀ Назад / Вперёд ▶."""
+    """Action history: ◀ Back / Forward ▶."""
 
     def push_history(self, label, pre=None):
         self.undo_stack.append((label, pre if pre is not None else copy.deepcopy(self.song)))

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Модель данных: нота, трек, песня и их сохранение."""
+"""Data model: note, track, song and their saving."""
 
 from dataclasses import dataclass, field, asdict, fields
 
@@ -8,10 +8,10 @@ from scripts.core.constants import SOUND_PRESETS, TRACK_COLORS
 
 @dataclass(eq=False)
 class Note:
-    s: int          # начало (шаг 1/16)
-    l: int          # длина в шагах
-    p: int          # MIDI-высота (для ударных — тип барабана)
-    v: float = 0.8  # громкость 0..1
+    s: int          # start (1/16 step)
+    l: int          # length in steps
+    p: int          # MIDI pitch (for drums — the drum type)
+    v: float = 0.8  # volume 0..1
 
 
 @dataclass(eq=False)

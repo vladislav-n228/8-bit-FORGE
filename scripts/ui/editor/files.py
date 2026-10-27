@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Экспорт WAV / MP3 / стемов / MIDI / петли, сохранение и открытие проекта."""
+"""Export of WAV / MP3 / stems / MIDI / loop, saving and opening projects."""
 
 import copy
 import json
@@ -7,24 +7,25 @@ import os
 import threading
 import time
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox, simpledialog
 
 import numpy as np
 
 from scripts.audio.ffmpeg import export_mp3, FFMPEG_HELP, find_ffmpeg
 from scripts.audio.loudness import LOUDNESS_TARGETS, normalize_loudness
 from scripts.audio.synth import fade_out, render_song, write_midi, write_wav
-from scripts.core.constants import APP_NAME, NOTE_NAMES, SCALES, STYLES
+from scripts.core.constants import APP_NAME, CHIPS, NOTE_NAMES, SCALES, STYLES, TRACK_DEFS
 from scripts.core.i18n import T
 from scripts.core.model import song_from_dict, song_to_dict
 from scripts.core.prefs import save_prefs
 from scripts.core.tasks import parallel_map, run_in_process
 from scripts.core.theory import fmt_time
+from scripts.music import importer
 from scripts.music.structure import PLATFORM_PRESETS
 
 
 def render_export(o):
-    """Готовый к выкладке звук: повторы, затухание, громкость для соцсетей. Без Tk — можно в потоке или процессе.
+    """Sound ready for publishing: repeats, fade-out, loudness for social media. No Tk — can run in a thread or process.
     → (audio, sr, lufs)"""
     sg, m, s0, s1 = o['song'], o['m'], o['s0'], o['s1']
     if o['loop']:
@@ -43,7 +44,7 @@ def render_export(o):
 
 
 class FilesMixin:
-    """Экспорт WAV / MP3 / стемов / MIDI / петли, сохранение и открытие проекта."""
+    """Export of WAV / MP3 / stems / MIDI / loop, saving and opening projects."""
 
     def _ask_save(self, ext, types, name):
         path = filedialog.asksaveasfilename(defaultextension=ext, filetypes=types, initialfile=name,
@@ -58,9 +59,9 @@ class FilesMixin:
         st = T(sg.style).split('·')[-1].strip().replace(' ', '_').replace('!', '') or 'track'
         return f'8bitforge_{st}_{sg.seed}'
 
-    # ── фоновые задачи: окно не зависает, внизу крутится индикатор ──
+    # ── background tasks: the window doesn't freeze, an indicator spins at the bottom ──
     def run_bg(self, label, work, done=None, fail=None):
-        """work(report) выполняется в фоновом потоке и не трогает Tk; done(результат) — уже в главном потоке."""
+        """work(report) runs in a background thread and doesn't touch Tk; done(result) runs in the main thread."""
         self._bg_seq += 1
         key = self._bg_seq
         self._bg[key] = dict(label=label, frac=None, note='', t0=time.time())
@@ -94,7 +95,7 @@ class FilesMixin:
             self.bg_box.pack_forget()
             return
         if not self.bg_box.winfo_ismapped():
-            self.bg_box.pack(side='right', padx=(0, 18), before=self.lbl_status)  # место — раньше длинного статуса
+            self.bg_box.pack(side='right', padx=(0, 18), before=self.lbl_status)  # placed before the long status
             self._bg_anim()
 
     def _bg_anim(self):
@@ -114,7 +115,7 @@ class FilesMixin:
         self.root.after(100, self._bg_anim)
 
     def _export_job(self, which='song', loop=False):
-        """Снимок всего, что нужно для рендера. Читается в главном потоке — фоновым потокам трогать Tk нельзя."""
+        """A snapshot of everything needed for rendering. Read in the main thread — background threads must not touch Tk."""
         reg = self.get_region()
         s0, s1 = (reg[1], reg[2]) if which == 'selection' and reg else (0, self.song.total_steps)
         return dict(song=copy.deepcopy(self.song), m=self.master_settings(), s0=s0, s1=s1, which=which, loop=loop,
@@ -123,7 +124,7 @@ class FilesMixin:
 
     @staticmethod
     def _render_job(o):
-        """Рендер экспорта в отдельном процессе (вызывать из фонового потока). → (audio, sr, lufs)"""
+        """Export rendering in a separate process (call from a background thread). → (audio, sr, lufs)"""
         return run_in_process(render_export, o)
 
     def render_for_export(self, which='song', loop=False):
@@ -228,7 +229,7 @@ class FilesMixin:
         def work(report):
             lock, count = threading.Lock(), [0]
 
-            def one(i):  # дорожки считаются параллельно — каждая в своём процессе
+            def one(i):  # tracks are rendered in parallel — each in its own process
                 audio, sr = run_in_process(render_song, song, m, only=[i])
                 write_wav(os.path.join(folder, f'{slug}_{i + 1:02d}_{T(song.tracks[i].name)}.wav'), audio, sr, bits8=bits8)
                 with lock:
@@ -265,9 +266,9 @@ class FilesMixin:
         except OSError as ex:
             messagebox.showerror(APP_NAME, T('Не удалось сохранить:\n{0}').format(ex))
 
-    def open_project(self):
-        path = filedialog.askopenfilename(filetypes=[(T('Проект 8-BIT FORGE'), '*.json'), (T('Все файлы'), '*.*')],
-                                          initialdir=self.prefs.get('dir'))
+    def open_project(self, path=None):
+        path = path or filedialog.askopenfilename(filetypes=[(T('Проект 8-BIT FORGE'), '*.json'), (T('Все файлы'), '*.*')],
+                                                  initialdir=self.prefs.get('dir'))
         if not path:
             return
         try:
@@ -300,3 +301,74 @@ class FilesMixin:
         self.after_song_change()
         self.zoom_fit()
         self.set_status(T('Проект открыт: {0}').format(path))
+
+    # ── import: our own project, MIDI, Dendy music (NSF / VGM) and Sega music (VGM / VGZ) ──
+    def import_track(self):
+        exts = ' '.join('*' + e for e in importer.IMPORT_EXTS)
+        path = filedialog.askopenfilename(
+            parent=self.root, title=T('Импорт трека'), initialdir=self.prefs.get('dir'),
+            filetypes=[(T('Все поддерживаемые'), exts), (T('Проект 8-BIT FORGE'), '*.json'), ('MIDI', '*.mid *.midi'),
+                       (T('Dendy / NES (NSF, VGM)'), '*.nsf *.vgm *.vgz'), (T('Sega (VGM, VGZ)'), '*.vgm *.vgz'),
+                       (T('Все файлы'), '*.*')])
+        if not path:
+            return
+        self.prefs['dir'] = os.path.dirname(path)
+        save_prefs(self.prefs)
+        try:
+            info = importer.probe(path)
+        except (importer.ImportFailed, OSError) as ex:
+            return self._import_failed(ex)
+        if info['fmt'] == 'project':
+            return self.open_project(path)
+        song_no = None
+        if info['fmt'] == 'nsf' and info['songs'] > 1:  # an NSF holds all of the game's music — ask which tune to take
+            song_no = simpledialog.askinteger(
+                APP_NAME, T('В файле {0} мелодий. Какую импортировать? (1–{0})').format(info['songs']),
+                initialvalue=info['start'], minvalue=1, maxvalue=info['songs'], parent=self.root)
+            if not song_no:
+                return
+        name = os.path.basename(path)
+        self._bg_seq += 1
+        key = self._bg_seq
+        self._bg[key] = dict(label=T('Импорт трека'), frac=None, note='', t0=time.time())
+        self._bg_show()
+
+        def finish(cb):
+            def f(val):
+                self._bg.pop(key, None)
+                self._bg_show()
+                cb(val)
+            return f
+        self.tasks.submit(lambda report: run_in_process(importer.convert, info, song_no),
+                          finish(lambda song: self._apply_import(song, name)), finish(self._import_failed))
+
+    def _import_failed(self, ex):
+        self.set_status(T('⚠ Не удалось импортировать'))
+        messagebox.showerror(APP_NAME, T('Не удалось импортировать:\n{0}').format(
+            T(str(ex)) if isinstance(ex, importer.ImportFailed) else ex), parent=self.root)
+
+    def _apply_import(self, song, name):
+        """Imported song → into the editor. The previous one stays available via "◀ Back"."""
+        if self._disposed:
+            return
+        self.stop()
+        self.push_history(T('⬆ Импорт: {0}').format(name))
+        title = song.params.get('title') or os.path.splitext(name)[0]
+        # generator settings are needed so ♻ Recreate and "+4 bars" work on an imported track too
+        params = dict(self.collect_params(), key=song.key, scale=song.scale, bpm=song.bpm, bars=song.bars,
+                      chord_steps=song.chord_steps, swing=0.0, exact_sec=None, intro=False, outro=False, drop_sec=0,
+                      include=[any(t.kind == k and t.notes for t in song.tracks) for k, _ in TRACK_DEFS])
+        params.update(song.params, title=title)
+        song.params = params
+        self.song = song
+        self.v_key.set(NOTE_NAMES[song.key])
+        self.v_scale.set(song.scale)
+        self.v_chip.set(next((k for k, v in CHIPS.items() if v == params.get('chip')), 'Dendy (NES)'))
+        self.project_path = None
+        self.root.title(f'{APP_NAME} — {name}')
+        self.cursor = self.sel_track = 0
+        self.after_song_change()
+        self.zoom_fit()
+        notes = sum(len(t.notes) for t in song.tracks)
+        self.set_status(T('⬆ Импортировано: «{0}» — дорожек: {1}, нот: {2}, {3}. Пробел — слушать.').format(
+            title, len(song.tracks), notes, fmt_time(song.total_steps * song.step_dur)))

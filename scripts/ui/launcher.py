@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Стартовый экран: выбор — чат-промпт или ручное создание."""
+"""Start screen: choosing between the chat prompt and manual creation."""
 
 import tkinter as tk
 
@@ -11,7 +11,7 @@ from scripts.ui.style import ACCENTS
 
 
 class Launcher:
-    """Стартовый экран: тёмный фон и вопрос — как создавать музыку."""
+    """Start screen: a dark background and a question — how to create music."""
     CARDS = (
         ('chat', '✦', 'Чат-промпт',
          'Опишите словами, что нужно, — модели Forge сочинят трек, фон, джингл или звуковой эффект.',
@@ -28,7 +28,8 @@ class Launcher:
         self.root, self.shell = root, shell
         self.hover = None
         self.cards = {}
-        self.langs = {}  # кнопки языка в правом верхнем углу: ключ 'lang:en' / 'lang:ru' → прямоугольник
+        self.import_zone = (0, 0, 0, 0)  # the "Import track" button in the top-left corner
+        self.langs = {}  # language buttons in the top-right corner: key 'lang:en' / 'lang:ru' → rectangle
         self._job = None
         self._bg = (None, None)
         self.retitle()
@@ -54,7 +55,7 @@ class Launcher:
         self._job = self.root.after(30, self.draw)
 
     def _card_at(self, x, y):
-        zones = list(self.langs.items()) + list(self.cards.items())
+        zones = list(self.langs.items()) + list(self.cards.items()) + [('import', self.import_zone)]
         return next((key for key, (x0, y0, x1, y1) in zones if x0 <= x <= x1 and y0 <= y <= y1), None)
 
     def _on_motion(self, e):
@@ -71,6 +72,8 @@ class Launcher:
             self.shell.open_chat()
         elif key == 'manual':
             self.shell.open_manual()
+        elif key == 'import':
+            self.shell.import_track()
         elif key and key.startswith('lang:'):
             self.shell.set_language(key[5:])
 
@@ -96,6 +99,7 @@ class Launcher:
         top = y + k * 132
         bottoms = []
         self._draw_langs(W, k, acc)
+        self._draw_import(k, acc)
         for i, (key, icon, title, desc, feats) in enumerate(self.CARDS):
             title, desc, feats = T(title), T(desc), [T(f) for f in feats]
             x0 = cx - cw - gap / 2 if i == 0 else cx + gap / 2
@@ -130,8 +134,20 @@ class Launcher:
             cv.create_text(cx, H - k * 24, text=T('Модели Forge работают прямо на вашем компьютере — без интернета'),
                            font=('Segoe UI', 9), fill='#5f5f78')
 
+    def _draw_import(self, k, acc):
+        """"⬆ Import track…" — a project, MIDI or Dendy / Sega music straight into the editor."""
+        cv = self.cv
+        x0, y0, h = k * 18, k * 16, k * 26
+        t = cv.create_text(x0 + k * 14, y0 + h / 2, text=T('⬆  Импорт трека…'), font=('Segoe UI Semibold', 9),
+                           fill=self.BG if self.hover == 'import' else '#d6d6e4', anchor='w')
+        x1 = cv.bbox(t)[2] + k * 14
+        r = round_rect(cv, x0, y0, x1, y0 + h, h / 2, fill=acc if self.hover == 'import' else '#14141f',
+                       outline='' if self.hover == 'import' else '#2a2a3c')
+        cv.tag_lower(r, t)
+        self.import_zone = (x0, y0, x1, y0 + h)
+
     def _draw_langs(self, W, k, acc):
-        """Переключатель языка: «EN | RU», текущий язык подсвечен."""
+        """Language switch: "EN | RU", the current language is highlighted."""
         cv = self.cv
         f = ('Segoe UI Semibold', 9)
         h, seg = k * 26, k * 40

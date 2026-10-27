@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Мышь: выделение и рисование на дорожках, заголовки, линейка, колесо и масштаб."""
+"""Mouse: selecting and drawing on the tracks, headers, ruler, wheel and zoom."""
 
 import copy
 import tkinter as tk
@@ -12,7 +12,7 @@ from scripts.ui.style import HEAD_W, LANE_H, PMAX, PMIN
 
 
 class MouseMixin:
-    """Мышь: выделение и рисование на дорожках, заголовки, линейка, колесо и масштаб."""
+    """Mouse: selecting and drawing on the tracks, headers, ruler, wheel and zoom."""
 
     def _ev_xy(self, e):
         return self.lanes.canvasx(e.x), self.lanes.canvasy(e.y)

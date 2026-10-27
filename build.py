@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Сборка 8-BIT FORGE в программу для Windows (.exe) через PyInstaller.
+Builds 8-BIT FORGE into a Windows program (.exe) with PyInstaller.
 
-Запуск (из этой папки):
-    python build.py              — один файл:   dist/8-BIT FORGE.exe
-    python build.py --folder     — папка:       dist/8-BIT FORGE/8-BIT FORGE.exe (запускается быстрее)
-    python build.py --ffmpeg     — положить ffmpeg внутрь: MP3 и видео будут работать на любом компьютере
-    python build.py --console    — с окном консоли (видно ошибки — удобно для отладки)
+Run (from this folder):
+    python build.py              — single file:  dist/8-BIT FORGE.exe
+    python build.py --folder     — folder:       dist/8-BIT FORGE/8-BIT FORGE.exe (starts faster)
+    python build.py --ffmpeg     — bundle ffmpeg inside: MP3 and video will work on any computer
+    python build.py --console    — with a console window (errors are visible — handy for debugging)
 
-Нужно: Python 3.9+, numpy, pyinstaller (если его нет — скрипт предложит поставить сам).
-Pillow необязателен: с ним у программы будет своя иконка и заработает экспорт видео.
+Requires: Python 3.9+, numpy, pyinstaller (if it's missing, the script offers to install it).
+Pillow is optional: with it the app gets its own icon and video export works.
 """
 
 import argparse
@@ -27,7 +27,7 @@ DIST = os.path.join(ROOT, 'dist')
 APP_NAME = '8-BIT FORGE'
 VERSION = (1, 0, 0, 0)
 
-# Пакеты, которые могут стоять в Python, но программе не нужны — без них .exe в разы меньше
+# Packages that may be installed in Python but the app doesn't need — without them the .exe is several times smaller
 EXCLUDES = ['matplotlib', 'cv2', 'pygame', 'scipy', 'pandas', 'IPython', 'jupyter', 'notebook', 'PyQt5', 'PyQt6',
             'PySide2', 'PySide6', 'torch', 'tensorflow', 'sympy', 'numba', 'pytest', 'setuptools', 'pip',
             'tkinter.test', 'pydoc_data', 'lib2to3', 'imageio_ffmpeg']
@@ -55,7 +55,7 @@ def check_requirements():
 
 
 def make_icon():
-    """Та же пиксельная иконка, что у окон программы, — в .ico сразу нескольких размеров."""
+    """The same pixel icon as the app's windows — as an .ico with several sizes at once."""
     try:
         from PIL import Image
     except ImportError:
@@ -67,14 +67,14 @@ def make_icon():
     for y, row in enumerate(ICON_PIXELS):
         for x, ch in enumerate(row):
             img.putpixel((x, y), tuple(int(ICON_COLORS[ch][i:i + 2], 16) for i in (1, 3, 5)) + (255,))
-    big = img.resize((256, 256), Image.NEAREST)  # крупные чёткие пиксели, без размытия
+    big = img.resize((256, 256), Image.NEAREST)  # big crisp pixels, no blur
     path = os.path.join(BUILD, 'forge.ico')
     big.save(path, sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
     return path
 
 
 def make_version_file():
-    """Свойства файла в Проводнике: название, версия, описание."""
+    """File properties in Explorer: name, version, description."""
     v = ', '.join(map(str, VERSION))
     vs = '.'.join(map(str, VERSION))
     text = f"""VSVersionInfo(
@@ -108,7 +108,7 @@ def find_ffmpeg_exe():
 def build(args):
     os.makedirs(BUILD, exist_ok=True)
     icon = make_icon()
-    sep = os.pathsep  # разделитель «источник;папка» для --add-binary
+    sep = os.pathsep  # "source;folder" separator for --add-binary
     cmd = [sys.executable, '-m', 'PyInstaller', ENTRY,
            '--name', APP_NAME,
            '--onedir' if args.folder else '--onefile',
@@ -116,7 +116,7 @@ def build(args):
            '--noconfirm', '--clean',
            '--workpath', BUILD, '--distpath', DIST, '--specpath', BUILD,
            '--paths', ROOT,
-           '--collect-submodules', 'scripts',  # все модули программы, даже подключаемые «на лету»
+           '--collect-submodules', 'scripts',  # all of the app's modules, even those loaded on the fly
            '--version-file', make_version_file()]
     if icon:
         cmd += ['--icon', icon]

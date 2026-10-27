@@ -1,1 +1,1 @@
-"""Ручной редактор: класс App собран из миксинов по разделам."""
+"""Manual editor: the App class is assembled from mixins, one per area."""

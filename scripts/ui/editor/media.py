@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Для видео: метки битов, ролик MP4 с визуализацией, окно звуковых эффектов."""
+"""For video: beat markers, an MP4 clip with a visualizer, the sound effects window."""
 
 import copy
 import os
@@ -23,7 +23,7 @@ from scripts.ui.style import FONT_B, HELP_TEXT, THEMES
 
 
 class MediaMixin:
-    """Для видео: метки битов, ролик MP4 с визуализацией, окно звуковых эффектов."""
+    """For video: beat markers, an MP4 clip with a visualizer, the sound effects window."""
 
     MARKER_HINTS = {
         'edl': 'DaVinci Resolve: Timeline → Import → Timeline Markers from EDL.\nТрек положите в самое начало '
@@ -136,11 +136,11 @@ class MediaMixin:
         state = {'cancel': None, 'audio': None, 'pv': 0}
 
         def audio_job():
-            """Снимок настроек звука (в главном потоке); сам рендер потом идёт в фоне."""
+            """A snapshot of the sound settings (in the main thread); the rendering itself then runs in the background."""
             return self._export_job('selection' if V['sel'].get() and self.get_region() else 'song')
 
         def snapshot():
-            """Все настройки читаем в главном потоке — фоновому потоку трогать Tk нельзя."""
+            """All settings are read in the main thread — the background thread must not touch Tk."""
             return dict(song=copy.deepcopy(self.song), size=VIDEO_SIZES[V['size'].get()], fps=int(V['fps'].get()),
                         style=V['style'].get(), title=V['title'].get(), sub=V['sub'].get(), bg=V['bg'], img=V['img'],
                         crt=V['crt'].get(), stars=V['stars'].get(), prog=V['prog'].get(), accent=self.c['accent'])
@@ -152,7 +152,7 @@ class MediaMixin:
                                  o['accent'], o['img'], o['crt'], o['stars'], o['prog'])
 
         def preview():
-            """Кадр-превью строится в фоне: на длинном треке окно не замирает."""
+            """The preview frame is built in the background: the window doesn't freeze on a long track."""
             bg_lbl.configure(text=os.path.basename(V['img']) if V['img'] else V['bg'])
             state['pv'] += 1
             token, cached, o = state['pv'], state['audio'], snapshot()
@@ -199,7 +199,7 @@ class MediaMixin:
 
             def work():
                 try:
-                    audio, sr, _ = self._render_job(job)  # звук тоже готовим в фоне
+                    audio, sr, _ = self._render_job(job)  # the sound is prepared in the background too
                     write_wav(tmp.name, audio, sr)
                     R = make_renderer(audio, sr, opts)
 

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Общие виджеты."""
+"""Shared widgets."""
 
 import tkinter as tk
 from tkinter import ttk
@@ -8,7 +8,7 @@ from scripts.core.i18n import T
 
 
 def translate_combo(cb, var, values, on_select=None):
-    """Список показывает перевод, а var хранит внутреннее значение (оно же уходит в проект и настройки)."""
+    """The list shows the translation, while var holds the internal value (the one that goes into the project and settings)."""
     labels = [T(v) for v in values]
     back = dict(zip(labels, values))
     shown = tk.StringVar(cb)

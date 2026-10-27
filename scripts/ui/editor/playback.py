@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Воспроизведение, плейхед, живое обновление и прослушивание звука трека."""
+"""Playback, playhead, live update and previewing a track's sound."""
 
 import copy
 import dataclasses
@@ -23,7 +23,7 @@ from scripts.core.theory import clamp
 
 
 class PlaybackMixin:
-    """Воспроизведение, плейхед, живое обновление и прослушивание звука трека."""
+    """Playback, playhead, live update and previewing a track's sound."""
 
     def play(self, s0=None, s1=None, loop=None, song=None, start=None):
         sg = song or self.song
@@ -131,7 +131,7 @@ class PlaybackMixin:
         self.chk_loop.configure(text=T('↻ Петля: вкл') if on else T('↻ Петля: выкл'))
         ps = self.pstate
         if self.playing and ps.get('live') and ps.get('loop') != on:
-            # winsound не умеет менять режим на лету — перезапускаем с текущей позиции
+            # winsound can't change mode on the fly — restart from the current position
             self.play(ps['s0'], ps['s1'], on, start=int(clamp(self.play_step, ps['s0'], ps['s1'] - 1)))
 
     def schedule_refresh(self):

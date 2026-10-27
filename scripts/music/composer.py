@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Классический композитор ручного режима: генерация треков по стилю и вариации кусков."""
+"""The classic manual-mode composer: generating tracks by style and variations of pieces."""
 
 from scripts.core.constants import BASS_EVENTS, BASS_PATTERNS, CELLS, HARMONY_MODES, RANGES
 from scripts.core.model import Note
@@ -34,7 +34,7 @@ class Composer:
               'arp': self.gen_arp, 'drums': self.gen_drums, 'voice': self.gen_voice}.get(tr.kind, self.gen_lead)
         return self.clean(fn(tr, s0, s1, allow_repeat), s0, s1)
 
-    # ── мелодия ──
+    # ── melody ──
     def _next_pitch(self, st, pos, pool, cx):
         rng, sg = self.rng, self.song
         cur = st['cur']
@@ -112,7 +112,7 @@ class Composer:
                         out += self._melody_span(max(t0, s0), min(pe, s1), pool, cells, rest_p, cx, st)
                     continue
             out += self._melody_span(max(ps, s0), min(pe, s1), pool, cells, rest_p, cx, st)
-            if ph % 2 == 1 and s0 <= pe - 4 and pe <= s1:  # каденция в конце 4-тактовой фразы
+            if ph % 2 == 1 and s0 <= pe - 4 and pe <= s1:  # a cadence at the end of a 4-bar phrase
                 out = [n for n in out if not (pe - 4 <= n.s < pe)]
                 rpc = chord_pcs(sg, chord_at(sg, pe - 4))[0]
                 cand = [p for p in range(lo, hi + 1) if p % 12 == rpc]
@@ -161,7 +161,7 @@ class Composer:
         return out
 
     def gen_voice(self, tr, s0, s1, allow_repeat):
-        """Голос «поёт» упрощённую мелодию лида: без быстрых нот, связно, в вокальном диапазоне."""
+        """The voice "sings" a simplified lead melody: no fast notes, legato, in the vocal range."""
         sg, rng = self.song, self.rng
         lo, hi = RANGES['voice']
         lead = next((t for t in sg.tracks if t.kind == 'lead'), None)
@@ -302,7 +302,7 @@ class Composer:
                     out.append(Note(b0 + off, 1, kind, v))
         return out
 
-    # ── варианты существующего куска ──
+    # ── variants of an existing piece ──
     def vary(self, tr, old, s0, s1, mode):
         if not old:
             return self.generate(tr, s0, s1)
@@ -345,7 +345,7 @@ class Composer:
                 p2 = scale_pitches(sg, lo, hi)
                 st = {'cur': nearest(p2, old[0].p), 'dir': rng.choice((-1, 1))}
                 out = [Note(n.s, n.l, self._next_pitch(st, n.s, p2, cx), n.v) for n in old]
-        else:  # вариация
+        else:  # variation
             out = []
             for n in old:
                 r = rng.random()

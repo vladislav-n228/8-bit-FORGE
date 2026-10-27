@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Общее для моделей Forge: опции чата, разбор текста, помощники."""
+"""Shared by the Forge models: chat options, text parsing, helpers."""
 
 import re
 
@@ -30,7 +30,7 @@ _EN_MODES = {'Dorian', 'Phrygian', 'Lydian', 'Mixolydian'}
 
 
 def key_text(key, scale):
-    """Тональность для текста ответа: «ля минор» / «A minor», «C Dorian»."""
+    """Key for the reply text: «ля минор» / "A minor", "C Dorian"."""
     if i18n.LANG == 'ru':
         return f'{RU_NOTES[key]} {scale.lower()}'
     name = T(scale)
@@ -41,7 +41,7 @@ _EN_MODES = {'Dorian', 'Phrygian', 'Lydian', 'Mixolydian'}
 
 
 def key_text(key, scale):
-    """Тональность для текста ответа: «ля минор» / «A minor», «C Dorian»."""
+    """Key for the reply text: «ля минор» / "A minor", "C Dorian"."""
     if i18n.LANG == 'ru':
         return f'{RU_NOTES[key]} {scale.lower()}'
     name = T(scale)
@@ -62,7 +62,7 @@ def _ai_words(text):
 
 
 def _ai_match(t, words, stems):
-    """Позиции слов, совпавших с основами. «=слово» — точное совпадение; фраза с пробелом ищется целиком (-1)."""
+    """Positions of words that matched the stems. "=word" is an exact match; a phrase with a space is searched as a whole (-1)."""
     out = []
     for s in stems:
         if ' ' in s:
@@ -76,7 +76,7 @@ def _ai_match(t, words, stems):
 
 
 def _ai_strength(t, words, stems):
-    """0 — не найдено, 1 — найдено, 1.6 — с усилителем («очень грустно»), -1 — с отрицанием («не быстро»)."""
+    """0 — not found, 1 — found, 1.6 — with an intensifier ("very sad"), -1 — negated ("not fast")."""
     best = 0.0
     for i in _ai_match(t, words, stems):
         prev = words[i - 1] if i > 0 else ''
@@ -88,7 +88,7 @@ def _ai_strength(t, words, stems):
 
 
 def _ai_seconds(t):
-    """Длительность и секунда дропа из текста → (секунды | None, дроп | None)."""
+    """Duration and drop second from the text → (seconds | None, drop | None)."""
     drop = None
     m = re.search(r'(дроп|акцент|кульминац|взрыв|пик|drop|climax|peak)\D{0,20}?(\d+(?:[.,]\d+)?)\s*(сек|sec|с\b|s\b)?',
                   t)

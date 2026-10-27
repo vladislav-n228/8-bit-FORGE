@@ -1,1 +1,1 @@
-"""Интерфейс: стартовый экран, чат-студия, ручной редактор."""
+"""Interface: start screen, chat studio, manual editor."""

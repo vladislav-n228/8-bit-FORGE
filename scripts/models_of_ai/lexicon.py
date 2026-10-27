@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Словарь запросов: какие слова как меняют характер, модель, звучание."""
+"""Request vocabulary: which words change the character, model and sound, and how."""
 
-# (основы слов, эффект). f — сдвиг характера, m — голоса за модель, g — за жанр; остальное — прямые указания.
-# Запросы понимаются и по-русски, и по-английски: у каждой группы есть основы на обоих языках.
+# (word stems, effect). f — character shift, m — votes for a model, g — for a genre; the rest are direct instructions.
+# Requests are understood both in Russian and in English: every group has stems in both languages.
 AI_LEXICON = [
     (('грус', 'печал', 'дожд', 'одинок', 'меланх', 'sad', 'тоск', 'слез', 'осен', 'прощ', 'ностальг', 'плач',
       'sorrow', '=rain', 'rainy', 'raining', 'lonel', 'melanch', 'tear', 'autumn', 'farewell', 'goodbye',

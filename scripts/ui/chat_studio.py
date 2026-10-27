@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Чат-студия: запрос словами → модель Forge сочиняет музыку или звук.
+"""Chat studio: a request in words → a Forge model composes music or a sound.
 
-Анимации: живой пиксельный фон, плавное появление экрана и сообщений, «думающий» индикатор
-(вращающаяся иконка, пульс, переливающийся текст, эквалайзер-заглушка), печать ответа,
-рост волны, плейхед и живой эквалайзер при прослушивании, плавные наведения, всплывающие уведомления."""
+Animations: a living pixel background, smooth appearance of the screen and messages, a "thinking" indicator
+(spinning icon, pulse, shimmering text, placeholder equalizer), typing of the reply,
+growing waveform, playhead and live equalizer during playback, smooth hovers, pop-up notifications."""
 
 import copy
 import math
@@ -20,14 +20,16 @@ import numpy as np
 from scripts.audio.ffmpeg import export_mp3, FFMPEG_HELP, find_ffmpeg
 from scripts.audio.player import Player
 from scripts.audio.synth import render_song, write_wav
+from scripts.core import chats
 from scripts.core.constants import APP_NAME, VOWEL_NAMES
 from scripts.core import i18n
-from scripts.core.i18n import LANGUAGES, T
+from scripts.core.i18n import LANGUAGES, T, Tn
 from scripts.core.prefs import save_prefs
 from scripts.core.tasks import run_in_process, TaskRunner
 from scripts.core.theory import blend, clamp
-from scripts.models_of_ai.common import _ai_peaks, AI_ANY, AI_DURATIONS
+from scripts.models_of_ai.common import _ai_peaks, AI_ANY, AI_DURATIONS, AI_MASTER
 from scripts.models_of_ai.genres import AI_GENRES
+from scripts.models_of_ai.instruments import INSTRUMENT_GROUPS, INSTRUMENT_LABELS
 from scripts.models_of_ai.registry import AI_MODELS
 from scripts.models_of_ai.respond import ai_respond
 from scripts.models_of_ai.sfx import _ai_sfx_desc, AI_SFX, ai_sfx_sound
@@ -50,7 +52,7 @@ CHAT_THEMES = {
 CHAT_EXAMPLES = [('⚔', 'Эпичная битва с боссом в замке'), ('☾', 'Спокойный фон для стрима, ночной город'),
                  ('☂', 'Грустная мелодия под дождь, с вокалом'), ('✸', 'Набор звуков для платформера'),
                  ('★', 'Короткий победный джингл'), ('✧', 'Загадочный космос, 2 минуты')]
-EQ_BANDS = (2, 6, 14, 32, 80, 200)  # границы полос живого эквалайзера (бины БПФ на окне 2048)
+EQ_BANDS = (2, 6, 14, 32, 80, 200)  # band edges of the live equalizer (FFT bins for a 2048 window)
 GENRE_ICONS = {'Приключение': '⚑', 'Битва с боссом': '⚔', 'Экшен / погоня': '➹', 'Гонки': '⚐',
                'Подземелье / хоррор': '☠', 'Замок / готика': '♜', 'Деревня / уют': '⌂', 'Чилл / лоу-фай': '☕',
                'Синтвейв / ночной город': '☾', 'Космос': '☄', 'Подводный мир': '≈', 'Зима / праздник': '❄',
@@ -60,7 +62,7 @@ GENRE_ICONS = {'Приключение': '⚑', 'Битва с боссом': '�
 
 
 class ChatStudio:
-    """Чат-режим в духе нейросетевых ассистентов: запрос → модель Forge сочиняет музыку или звук."""
+    """Chat mode in the spirit of AI assistants: request → a Forge model composes music or a sound."""
     FONTS = {'greet': ('Segoe UI Semilight', 30), 'input': ('Segoe UI', 12), 'msg': ('Segoe UI', 11),
              'msg_b': ('Segoe UI Semibold', 11), 'title': ('Segoe UI Semibold', 13), 'small': ('Segoe UI', 9),
              'small_b': ('Segoe UI Semibold', 9), 'btn': ('Segoe UI Semibold', 10), 'brand': ('Consolas', 13, 'bold'),
@@ -73,9 +75,10 @@ class ChatStudio:
         self.tasks = TaskRunner(win)
         self.anim = Animator(win)
         self.msgs = []
+        self.chat_id = None  # the name the current chat is stored under in history (None — not saved yet)
         self.scroll, self._scroll_target, self.stick, self.content_h = 0.0, 0.0, True, 0
         self.area = (0, 0)
-        self.playing = None  # (результат, t0, длительность)
+        self.playing = None  # (result, t0, duration)
         self.busy = False
         self._fonts, self._imgs = {}, {}
         self._bg_key = None
@@ -89,6 +92,8 @@ class ChatStudio:
         self.v_dur, self.v_voc, self.v_genre = (tk.StringVar(win, value=AI_ANY) for _ in range(3))
         self.v_vowel = tk.StringVar(win, value='auto')
         self.v_autoplay = tk.BooleanVar(win, value=self.prefs.get('chat_autoplay', True))
+        # instruments ticked by the user; empty means "auto", the model picks them itself
+        self.instr = {c for c in self.prefs.get('chat_instruments', []) if c in INSTRUMENT_LABELS}
         for v in (self.v_model, self.v_dur, self.v_voc, self.v_genre, self.v_vowel, self.v_autoplay):
             v.trace_add('write', lambda *a: self._on_option())
         win.title(T('{0} — ✦ Чат-студия').format(APP_NAME))
@@ -118,19 +123,21 @@ class ChatStudio:
         self.apply_theme()
         self.entry.focus_set()
 
-    # ── смена языка: окно строится заново, переписка и выбранные опции переносятся ──
+    # ── language change: the window is rebuilt, the conversation and chosen options are carried over ──
     def export_state(self):
         return dict(msgs=self.msgs, text=self._text(), dur=self.v_dur.get(), voc=self.v_voc.get(),
-                    genre=self.v_genre.get(), vowel=self.v_vowel.get())
+                    genre=self.v_genre.get(), vowel=self.v_vowel.get(), chat_id=self.chat_id, instr=set(self.instr))
 
     def import_state(self, st):
-        for m in st['msgs']:  # убрать ссылки на элементы старого холста
+        for m in st['msgs']:  # drop references to items of the old canvas
             for key in [k for k in m if k.startswith('_') and k not in ('_in', '_grown')]:
                 del m[key]
             for r in m.get('results', ()):
                 for key in [k for k in r if k.startswith('_') and k != '_grown']:
                     del r[key]
         self.msgs = st['msgs']
+        self.chat_id = st.get('chat_id')
+        self.instr = set(st.get('instr', self.instr))
         self._intro = not self.msgs
         for var, key in ((self.v_dur, 'dur'), (self.v_voc, 'voc'), (self.v_genre, 'genre'), (self.v_vowel, 'vowel')):
             var.set(st[key])
@@ -139,7 +146,7 @@ class ChatStudio:
             self.ph.place_forget()
 
     def dispose(self):
-        """Закрыть окно без выхода из программы (при смене языка)."""
+        """Closes the window without quitting the app (on language change)."""
         self.stop_playback()
         self.anim.stop()
         if self._job:
@@ -156,7 +163,7 @@ class ChatStudio:
     def toggle_language(self):
         self.shell.set_language('ru' if i18n.LANG == 'en' else 'en')
 
-    # ── оформление ──
+    # ── styling ──
     def F(self, name):
         if name not in self._fonts:
             fam, size, *bold = self.FONTS[name]
@@ -191,7 +198,7 @@ class ChatStudio:
 
     def relayout(self):
         self._job = None
-        if self._popover:  # окно перестроилось — старое положение меню больше не верно
+        if self._popover:  # the window was rebuilt — the old menu position is no longer valid
             self._popover.close()
         cv, c, k = self.cv, self.c, self.k
         W, H = max(cv.winfo_width(), 300), max(cv.winfo_height(), 300)
@@ -224,16 +231,16 @@ class ChatStudio:
         self.cv.tag_raise('toast')
 
     def _mask(self, x0, y0, x1, y1):
-        """Кусок фона поверх сообщений — чтобы прокрученные сообщения уходили «под» шапку и поле ввода."""
+        """A piece of background over the messages — so scrolled messages go "under" the header and the input field."""
         y0, y1 = int(clamp(y0, 0, self.H)), int(clamp(y1, 0, self.H))
         if y1 <= y0:
             return
         img = self._imgs[f'mask{y0}'] = _photo(self._bg_arr[y0:y1, int(x0):int(x1)])
         self.cv.create_image(x0, y0, image=img, anchor='nw', tags=('overlay',))
 
-    # ── анимационные помощники ──
+    # ── animation helpers ──
     def _bg_at(self, x, y):
-        """Настоящий цвет градиентного фона в точке — в него элементы растворяются и из него проявляются."""
+        """The real color of the gradient background at a point — items dissolve into it and emerge from it."""
         arr = self._bg_arr
         r, g, b = arr[int(clamp(y, 0, arr.shape[0] - 1)), int(clamp(x, 0, arr.shape[1] - 1))]
         return '#%02x%02x%02x' % (r, g, b)
@@ -247,7 +254,7 @@ class ChatStudio:
         return out
 
     def _fade_in(self, tag, delay=0.0, dy=0.0, dur=.35, ease=ease_out):
-        """Проявить элементы с тегом из фона, заодно подвинув их на место снизу (или сверху при dy < 0)."""
+        """Fades in items with the tag from the background, also moving them into place from below (or from above if dy < 0)."""
         cv = self.cv
         ids = cv.find_withtag(tag)
         if not ids:
@@ -282,14 +289,14 @@ class ChatStudio:
         self.anim.tween(None, dur, lambda t: tint(cv, cols, bg, 1 - t), done=done)
 
     def _play_intro(self):
-        """Стартовый экран: приветствие выплывает, опции и подсказки появляются по очереди."""
+        """Start screen: the greeting floats in, options and suggestions appear one by one."""
         k = self.k
         groups = ['hero_g', 'hero_c'] + [f'hero_s{i}' for i in range(len(CHAT_EXAMPLES))] + ['hero_f']
         for i, tag in enumerate(groups):
             self._fade_in(tag, delay=.05 + i * .07, dy=k * (18 if i == 0 else 12), dur=.55, ease=ease_back)
 
     def _focus(self, on):
-        """Рамка поля ввода мягко подсвечивается акцентом, когда в нём курсор."""
+        """The input field border gently lights up with the accent color when the cursor is in it."""
         self._focused = on
         if self._pill is None:
             return
@@ -300,7 +307,7 @@ class ChatStudio:
         self.anim.tween('focus', .25, lambda t: self.cv.itemconfigure(pill, outline=blend(a, b, t)))
 
     def _ripple(self):
-        """Круги расходятся от кнопки отправки."""
+        """Circles ripple out from the send button."""
         if not self._send_c:
             return
         cv, c, k = self.cv, self.c, self.k
@@ -317,7 +324,7 @@ class ChatStudio:
             self.anim.tween(None, .6, fn, done=lambda o=o: cv.delete(o), delay=i * .14)
 
     def _toast(self, text, ok=True, ttl=2.8):
-        """Всплывающее уведомление сверху: выезжает, висит, растворяется."""
+        """Pop-up notification at the top: slides in, stays, fades out."""
         self._toast_state = dict(text=text, ok=ok, until=time.perf_counter() + ttl)
         self._draw_toast(animate=True)
         self.anim.tween('toast_life', ttl, lambda t: None, done=self._toast_out, ease=lambda t: t)
@@ -342,7 +349,7 @@ class ChatStudio:
         self._toast_state = None
         self._fade_out('toast', .35)
 
-    # ── элементы ──
+    # ── items ──
     def _button(self, x, y, text, cmd, style='ghost', anchor='w', tags=('overlay',), font='btn'):
         cv, c, k = self.cv, self.c, self.k
         f = self.F(font)
@@ -388,6 +395,7 @@ class ChatStudio:
         lh = self.F('input').metrics('linespace')
         name, short = AI_MODELS[self.v_model.get()]['name'].split(' ', 1)
         f_b, f_m = self.F('msg_b'), self.F('msg')
+        self._anchors = {}
         mw = f_b.measure(name + ' ') + f_m.measure(short + '  ▾')
         self._text_w = colw - k * 60 - mw - k * 96
         self._lines = lines = self._count_lines(self._text_w)
@@ -403,18 +411,23 @@ class ChatStudio:
             y0 = H * .44 - k * 31
             y1 = y0 + ph
             chips_y = y1 + k * 32
-        # шапка
+        # header
         cv.create_text(k * 22, k * 31, text='▚▞ 8-BIT FORGE', font=self.F('brand'), fill=c['accent_text'], anchor='w',
                        tags=('overlay',))
         cv.create_text(k * 32 + self.F('brand').measure('▚▞ 8-BIT FORGE'), k * 32, text=T('Чат-студия'),
                        font=self.F('small_b'), fill=c['muted'], anchor='w', tags=('overlay',))
         x = W - k * 18
-        for text, cmd in (('☀' if self.theme == 'dark' else '☾', self.toggle_theme),
-                          ('EN ⇄ RU', self.toggle_language),
-                          (T('⌂  Меню'), self.shell.show_launcher), (T('✎  Ручной режим'), self.shell.open_manual),
-                          (T('+  Новый чат'), self.new_chat)):
-            x = self._button(x, k * 31, text, cmd, anchor='e')[0] - k * 8
-        # поле ввода — «пилюля» как у нейросетевых чатов
+        for key, text, cmd in ((None, '☀' if self.theme == 'dark' else '☾', self.toggle_theme),
+                               (None, 'EN ⇄ RU', self.toggle_language),
+                               (None, T('⌂  Меню'), self.shell.show_launcher),
+                               (None, T('✎  Ручной режим'), self.shell.open_manual),
+                               (None, T('+  Новый чат'), self.new_chat),
+                               ('history', T('☰  История'), self._menu_history)):
+            bx0, bx1 = self._button(x, k * 31, text, cmd, anchor='e')
+            if key:
+                self._anchors[key] = (bx0, k * 15, bx1, k * 47)
+            x = bx0 - k * 8
+        # input field — a "pill" like in AI chats
         x1 = x0 + colw
         rad = min(k * 31, ph / 2)
         if self.theme == 'light':
@@ -423,8 +436,8 @@ class ChatStudio:
         self._pill = round_rect(cv, x0, y0, x1, y1, rad, fill=c['pill'], outline=border, width=1.5 * k,
                                 tags=('overlay',))
         cy = y1 - k * 31
-        self._pop_up = chat  # в чате поле внизу — меню открываются вверх, на стартовом экране — вниз
-        self._anchors = {'plus': (x0 + k * 13, cy - k * 18, x0 + k * 49, cy + k * 18)}
+        self._pop_up = chat  # in the chat the field is at the bottom — menus open upwards; on the start screen — downwards
+        self._anchors['plus'] = (x0 + k * 13, cy - k * 18, x0 + k * 49, cy + k * 18)
         self._circle_btn(x0 + k * 31, cy, k * 18, '+', self._menu_plus, c['pill'], c['btn_hover'], c['fg'], 'title')
         ey = cy - lh / 2 if lines == 1 else y0 + k * 16
         self.entry.configure(height=lines)
@@ -449,7 +462,7 @@ class ChatStudio:
         cv.tag_bind(tag, '<Button-1>', lambda e: self.win.after_idle(self._menu_model))
         self._send_c = (x1 - k * 33, cy, k * 20)
         self._send = self._circle_btn(x1 - k * 33, cy, k * 20, '➤', self.send, *self._send_colors(), 'msg_b')
-        # опции под полем: длительность, вокал, жанр
+        # options under the field: duration, vocals, genre
         x = x0 + k * 6
         for key, icon, label, var in (('dur', '◷', T('Длительность'), self.v_dur), ('voc', '♪', T('Вокал'), self.v_voc),
                                       ('genre', '♫', T('Жанр'), self.v_genre)):
@@ -463,6 +476,12 @@ class ChatStudio:
                                     tags=('overlay', 'hero_c'))
             self._anchors[key] = (bx0, chips_y - k * 16, bx1, chips_y + k * 16)
             x = bx1 + k * 8
+        n = len(self.instr)
+        text = f'☷  {T("Инструменты")}: ' + (T('по запросу') if not n else T(INSTRUMENT_LABELS[next(iter(self.instr))])
+                                              if n == 1 else T('выбрано {0}').format(n)) + '  ▾'
+        bx0, bx1 = self._button(x, chips_y, text, self._menu_instruments, style='chip_on' if n else 'chip',
+                                font='small_b', tags=('overlay', 'hero_c'))
+        self._anchors['instr'] = (bx0, chips_y - k * 16, bx1, chips_y + k * 16)
         if not chat:
             cv.create_text(W / 2, y0 - k * 54, text=T('С чего начнём?'), font=self.F('greet'), fill=c['fg'],
                            tags=('overlay', 'hero_g'))
@@ -523,7 +542,7 @@ class ChatStudio:
                 self.anim.tween('send', .2, lambda t_: self.cv.itemconfigure(o, fill=blend(old, fill, t_)))
             self.cv.itemconfigure(t, fill=fg)
 
-    # ── сообщения ──
+    # ── messages ──
     def _render_msgs(self):
         if not self.msgs:
             self.content_h = 0
@@ -544,7 +563,7 @@ class ChatStudio:
         self._scroll_target = clamp(self._scroll_target, 0, mx)
         self.scroll = clamp(self.scroll, 0, mx)
         self.cv.move('msg', 0, top - self.scroll)
-        for m in self.msgs:  # новые сообщения выплывают снизу
+        for m in self.msgs:  # new messages float up from below
             if not m.get('_in'):
                 m['_in'] = True
                 self._fade_in(f'm{m["_id"]}', delay=.06 if m['role'] == 'bot' else 0, dy=k * 18, dur=.4)
@@ -598,7 +617,7 @@ class ChatStudio:
         return ty
 
     def _draw_thinking(self, m, tx, ty, tw, th):
-        """«Модель думает»: переливающийся статус, прыгающие точки и эквалайзер-заглушка будущего трека."""
+        """"The model is thinking": shimmering status, bouncing dots and a placeholder equalizer for the future track."""
         cv, c, k, mt = self.cv, self.c, self.k, self._mt
         f = self.F('msg')
         text = m['status']
@@ -663,7 +682,7 @@ class ChatStudio:
             self.cv.itemconfigure(m['_tid'], text=text[:j] + caret if j >= 0 else '')
 
     def _type_step(self, dt, now):
-        """Ответ «печатается», как у нейросетевых чатов; потом проявляются карточки."""
+        """The reply is "typed" like in AI chats; then the cards appear."""
         active = False
         for m in self.msgs:
             if m.get('_typing') is None:
@@ -725,7 +744,7 @@ class ChatStudio:
                                             fill=c['accent'] if i < upto else c['wave'], outline='',
                                             tags=tags + (wid,)))
         r['_bars'], r['_shown'] = bars, upto
-        if grow:  # волна вырастает слева направо
+        if grow:  # the waveform grows from left to right
             r['_grown'] = True
 
             def fn(tt, bars=bars, heights=heights):
@@ -737,7 +756,7 @@ class ChatStudio:
                         cv.coords(b, co[0], mid - h / 2, co[2], mid + h / 2)
             self.anim.tween(None, .9, fn, ease=lambda q: q, delay=.1)
         r['_ph'] = r['_eq'] = None
-        if playing:  # плейхед и живой эквалайзер у заголовка
+        if playing:  # playhead and live equalizer next to the title
             px = x + pad + prog * (nb * step)
             r['_ph'] = cv.create_line(px, yy - k * 4, px, yy + wh + k * 4, fill=c['accent'], width=2 * k, tags=tags)
             ex, ey = x + w - pad - k * 40, y + pad + k * 20
@@ -769,7 +788,7 @@ class ChatStudio:
         return bottom
 
     def _play_step(self, dt, now):
-        """Покадрово: закрашиваем пройденную волну, двигаем плейхед, качаем эквалайзер, пульсирует рамка."""
+        """Per frame: paint the played part of the waveform, move the playhead, pump the equalizer, pulse the border."""
         if not self.playing:
             return False
         cv, c, k = self.cv, self.c, self.k
@@ -824,9 +843,9 @@ class ChatStudio:
             self.anim.loop('scroll', self._scroll_step)
         return 'break'
 
-    # ── ввод и запросы ──
+    # ── input and requests ──
     def _show_ph(self):
-        """Подсказка в пустом поле — правее мигающего курсора, иначе она его закрывает."""
+        """Placeholder in the empty field — to the right of the blinking cursor, otherwise it covers it."""
         self.ph.place(x=int(self.entry.cget('insertwidth')) + round(3 * self.k), y=0)
 
     def _entry_changed(self):
@@ -840,7 +859,7 @@ class ChatStudio:
             self._update_send()
 
     def _on_return(self, e):
-        if e.state & 0x1:  # Shift+Enter — новая строка
+        if e.state & 0x1:  # Shift+Enter — new line
             return None
         self.send()
         return 'break'
@@ -854,7 +873,7 @@ class ChatStudio:
     def _opts(self):
         v = self.v_vowel.get()
         return dict(model=self.v_model.get(), dur=self.v_dur.get(), voc=self.v_voc.get(), genre=self.v_genre.get(),
-                    vowel=None if v == 'auto' else v)
+                    vowel=None if v == 'auto' else v, instruments=sorted(self.instr) or None)
 
     def send(self, text=None):
         if self.busy:
@@ -866,10 +885,11 @@ class ChatStudio:
         self._show_ph()
         self.msgs.append(dict(role='user', text=text))
         self._run(text, self._opts())
+        self._persist()
         self._ripple()
 
     def _run(self, text, opts, again=False):
-        """Сочинение идёт в фоновом потоке — окно остаётся живым и анимированным."""
+        """Composing runs in a background thread — the window stays alive and animated."""
         bot = dict(role='bot', model=opts['model'], status=T('Думаю над запросом'), results=[], prompt=text,
                    opts=opts, again=again)
         self.msgs.append(bot)
@@ -878,7 +898,7 @@ class ChatStudio:
         self.relayout()
         self.anim.loop('think', self._think_step)
         seed = random.randrange(1, 999999)
-        def render(*a, **kw):  # синтез звука — в отдельном процессе, окно не подтормаживает
+        def render(*a, **kw):  # sound synthesis — in a separate process, the window doesn't stutter
             return run_in_process(render_song, *a, **kw)
         self.tasks.submit(lambda report: ai_respond(text, opts, seed, lambda s: report(None, s), render),
                           done=lambda res: self._done(bot, res),
@@ -907,9 +927,10 @@ class ChatStudio:
         self.relayout_msgs()
         self._update_send()
         self.anim.loop('type', self._type_step)
+        self._persist()
 
     def again(self, m, r):
-        if r['kind'] == 'sfx':  # звук перегенерируем на месте — это мгновенно
+        if r['kind'] == 'sfx':  # regenerate the sound in place — it's instant
             r['seed'] = random.randrange(1, 999999)
             P, audio = ai_sfx_sound(r['sfx'], r['mods'], r['seed'], r['chip'])
             r['variant'] += 1
@@ -919,12 +940,83 @@ class ChatStudio:
             self.player.stop()
             self.playing = None
             self.play_result(r)
+            self._persist()
         elif not self.busy:
             self._run(m['prompt'], m['opts'], again=True)
 
+    # ── chat history ──
+    def _persist(self):
+        """Saves the current chat to history (after every request and reply)."""
+        if not self.msgs:
+            return
+        if self.chat_id is None:
+            self.chat_id = chats.new_chat_id()
+        try:
+            chats.save_chat(self.chat_id, self.msgs)
+        except (OSError, TypeError, ValueError):
+            self._toast(T('Не удалось сохранить чат в историю'), ok=False)
+
+    def open_saved_chat(self, chat_id):
+        if self.busy:
+            return self._toast(T('Модель ещё сочиняет — откройте чат чуть позже'), ok=False)
+        if chat_id == self.chat_id:
+            return
+        try:
+            msgs = chats.load_chat(chat_id)
+        except (OSError, ValueError, KeyError, TypeError):
+            return self._toast(T('Не удалось открыть этот чат'), ok=False)
+        self.stop_playback()
+        self.msgs, self.chat_id = msgs, chat_id
+        self.scroll = self._scroll_target = 0.0
+        self.stick, self._intro = True, False
+        self.relayout()
+        self.entry.focus_set()
+
+    def delete_current_chat(self):
+        if not self.chat_id or self.busy:
+            return
+        if not messagebox.askyesno(APP_NAME, T('Удалить этот чат из истории?'), parent=self.win):
+            return
+        chats.delete_chat(self.chat_id)
+        self.new_chat()
+        self._toast(T('Чат удалён'))
+
+    def _menu_history(self, page=0):
+        k = self.k
+        saved = chats.list_chats()
+        per = max(3, int((self.win.winfo_height() - k * 260) // (k * 52)))
+        page = min(page, max(0, (len(saved) - 1) // per))
+        items = []
+        for it in saved[page * per:(page + 1) * per]:
+            title = it['title'] if len(it['title']) <= 44 else it['title'][:42].rstrip() + '…'
+            n = it.get('count', 1)
+            when = time.strftime('%d.%m.%Y  %H:%M', time.localtime(it.get('updated', 0)))
+            items.append(dict(label=title, icon='✦', desc=f'{when} · {n} {Tn(n, "запрос", "запроса", "запросов")}',
+                              checked=it['id'] == self.chat_id, cmd=lambda i=it['id']: self.open_saved_chat(i)))
+        if not items:
+            items = [dict(label=T('Пока пусто'), icon='…', desc=T('здесь появятся ваши чаты с мелодиями'))]
+
+        def go(p):
+            self._pop_closed = None  # the menu has just been closed by a click — open the neighbouring page right away
+            self._menu_history(p)
+        nav = []
+        if (page + 1) * per < len(saved):
+            nav.append(dict(label=T('Более ранние чаты'), icon='↓', cmd=lambda: go(page + 1)))
+        if page:
+            nav.append(dict(label=T('Более свежие чаты'), icon='↑', cmd=lambda: go(page - 1)))
+        nav.append(dict(label=T('Новый чат'), icon='+', cmd=self.new_chat))
+        if self.chat_id and any(it['id'] == self.chat_id for it in saved):
+            nav.append(dict(label=T('Удалить этот чат'), icon='✖', cmd=self.delete_current_chat))
+        title = T('История чатов')
+        if len(saved) > per:
+            title += f'  ·  {page + 1} / {-(-len(saved) // per)}'
+        self._open_popover('history', [dict(title=title, items=items), dict(items=nav)], align='right', min_w=340,
+                           up=False)
+
     def new_chat(self):
         self.stop_playback()
-        self.msgs.clear()
+        self.chat_id = None  # the previous chat is already in history
+        self.msgs = []
         self.scroll = self._scroll_target = 0.0
         self.stick, self._intro = True, True
         self.relayout()
@@ -942,10 +1034,37 @@ class ChatStudio:
         self.relayout()
         self.anim.loop('type', self._type_step)
 
-    # ── воспроизведение и файлы ──
+    # ── playback and files ──
+    def _with_audio(self, r, then):
+        """Results from history have no sound — build it (sounds instantly, a track in the background), then then()."""
+        if r.get('audio') is not None:
+            return then()
+        if r['kind'] == 'sfx':
+            r['audio'] = ai_sfx_sound(r['sfx'], r['mods'], r['seed'], r['chip'])[1]
+            return then()
+        if r.get('_rendering'):
+            return
+        r['_rendering'] = True
+        self._toast(T('♫  Собираю звук трека…'), ttl=60)
+        song, loop = r['song'], r.get('loop', False)
+
+        def done(audio):
+            r.pop('_rendering', None)
+            r['audio'] = audio
+            self._toast(T('✓  Звук готов'), ttl=1.2)
+            then()
+
+        def fail(ex):
+            r.pop('_rendering', None)
+            self._toast(T('Не удалось собрать звук'), ok=False)
+        self.tasks.submit(lambda _report: run_in_process(render_song, song, AI_MASTER, loop=loop)[0],
+                          done=done, error=fail)
+
     def play_result(self, r):
         if self.playing and self.playing[0] is r:
             return self.stop_playback()
+        if r.get('audio') is None:
+            return self._with_audio(r, lambda: self.play_result(r))
         if self.shell.app:
             self.shell.app.stop()
         try:
@@ -963,9 +1082,11 @@ class ChatStudio:
             self.relayout_msgs()
 
     def save_result(self, r, ext):
-        """Кодирование MP3 / запись WAV — в фоне: окно не зависает, по готовности всплывает уведомление."""
+        """MP3 encoding / WAV writing — in the background: the window doesn't freeze, a notification pops up when done."""
         if ext == '.mp3' and not find_ffmpeg():
             return messagebox.showinfo(APP_NAME, T(FFMPEG_HELP), parent=self.win)
+        if r.get('audio') is None:
+            return self._with_audio(r, lambda: self.save_result(r, ext))
         name = re.sub(r'[^\w\- ]+', '', r['title']).strip().replace(' ', '_') or 'forge'
         path = filedialog.asksaveasfilename(parent=self.win, defaultextension=ext, initialfile=name,
                                             filetypes=[(ext[1:].upper(), '*' + ext)],
@@ -992,9 +1113,37 @@ class ChatStudio:
         self.stop_playback()
         self.shell.open_manual(copy.deepcopy(r['song']), r['title'])
 
-    # ── меню ──
-    def _open_popover(self, key, sections, align='left', min_w=220):
-        """Открыть карточку-меню у кнопки key; повторный клик по той же кнопке её закрывает."""
+    # ── menus ──
+    def _instr_sections(self):
+        def toggle(c):
+            self.instr.symmetric_difference_update({c})
+            self._instr_changed = True
+
+        def clear():
+            self.instr.clear()
+            self._instr_changed = True
+        secs = [dict(title=T('Инструменты в треке'), items=[dict(
+            label=T('Авто — модель подберёт сама'), icon='✦', checked=not self.instr, keep=True, cmd=clear,
+            desc=T('или отметьте галочками — будут играть только они'))])]
+        for title, items in INSTRUMENT_GROUPS:
+            icon = lambda c: '◈' if 'Sega' in c else '▣' if 'NES' in c else '✱' if c == 'drums' else '⋰' if c == 'arp' else '♪'
+            secs.append(dict(title=T(title), cols=2, items=[
+                dict(label=T(label), icon=icon(c), checked=c in self.instr, keep=True, cmd=lambda c=c: toggle(c))
+                for c, label in items]))
+        return secs
+
+    def _menu_instruments(self):
+        self._instr_changed = False
+
+        def closed():
+            if self._instr_changed:
+                self.prefs['chat_instruments'] = sorted(self.instr)
+                save_prefs(self.prefs)
+                self._schedule()
+        self._open_popover('instr', self._instr_sections(), min_w=380, rebuild=self._instr_sections, on_close=closed)
+
+    def _open_popover(self, key, sections, align='left', min_w=220, up=None, **kw):
+        """Opens the card menu at button key; clicking the same button again closes it."""
         last = self._pop_closed
         if self._popover:
             same = self._popover.key == key
@@ -1002,10 +1151,11 @@ class ChatStudio:
             if same:
                 return
         elif last and last[0] == key and time.perf_counter() - last[1] < .3:
-            return  # клик по кнопке уже закрыл это меню (фокус ушёл) — не открываем снова
+            return  # a click on the button has already closed this menu (focus left) — don't open it again
         x0, y0, x1, y1 = self._anchors[key]
         rx, ry = self.cv.winfo_rootx(), self.cv.winfo_rooty()
-        self._popover = Popover(self, key, (rx + x0, ry + y0, rx + x1, ry + y1), sections, up=self._pop_up,
+        self._popover = Popover(self, key, (rx + x0, ry + y0, rx + x1, ry + y1), sections,
+                                up=self._pop_up if up is None else up, **kw,
                                 align=align, min_w=min_w)
 
     @staticmethod
@@ -1049,6 +1199,7 @@ class ChatStudio:
                             dict(label=T('Сразу проигрывать результат'), icon='▶', checked=self.v_autoplay.get(),
                                  desc=T('сейчас: ') + (T('включено') if self.v_autoplay.get() else T('выключено')),
                                  cmd=lambda: self.v_autoplay.set(not self.v_autoplay.get())),
+                            dict(label=T('История чатов'), icon='☰', cmd=self._menu_history),
                             dict(label=T('Новый чат'), icon='+', cmd=self.new_chat)]),
                 dict(title=T('Язык / Language'), cols=2, items=[
                     dict(label=name, icon='◉', checked=code == i18n.LANG,

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Старый «Компаньон»: трек по описанию по ключевым словам (работает офлайн)."""
+"""The old "Companion": a track from a description by keywords (works offline)."""
 
 import re
 
@@ -41,7 +41,7 @@ MAJOR_SCALES = {'Мажор', 'Лидийский', 'Миксолидийски�
 MINOR_SCALES = {'Минор', 'Гармонический минор', 'Дорийский', 'Фригийский', 'Пентатоника минор', 'Блюзовый'}
 
 
-# (основы слов, эффект). Слово совпадает, если начинается с основы; фразы с пробелом ищутся целиком.
+# (word stems, effect). A word matches if it starts with a stem; phrases with a space are searched as a whole.
 PROMPT_KEYWORDS = [
     (('босс', 'битв', 'бой', 'боя', 'сраж', 'драк', 'файт', 'boss', 'battle', 'fight', 'контра', 'враг'),
      dict(style='Dendy · Битва с боссом', w=2, tag='битва')),
@@ -96,7 +96,7 @@ PROMPT_KEYWORDS = [
 ]
 
 
-# Английские основы к тем же группам — описание можно писать и по-английски.
+# English stems for the same groups — the description can be written in English too.
 _EN_PROMPT = {
     'битва': ('combat', 'enemy', 'monster', 'dragon'), 'замок': ('vampire', 'dracula', 'gothic', 'knight', 'fortress'),
     'подземелье': ('mine', 'labyrinth', 'maze', 'metroid'),
@@ -138,7 +138,7 @@ EN_KEYS = {'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11}
 
 
 def interpret_prompt(text, genre, duration_label, voice_on, voice_type, rng):
-    """Разбирает описание → параметры генератора + пояснение «как я понял»."""
+    """Parses the description → generator parameters + an "as I understood it" explanation."""
     t = text.lower().replace('ё', 'е')
     words = re.findall(r'[a-zа-я0-9\-]+', t)
 
@@ -198,7 +198,7 @@ def interpret_prompt(text, genre, duration_label, voice_on, voice_type, rng):
         if re.search(rf'\b{w}\s+(минор|мажор)', t):
             key = k
     for m in re.finditer(r'\b([A-Ga-g])\s*(#|♯|b|♭|-?sharp|-?flat)?[\s-]+(minor|major)\b', text, re.I):
-        if m.group(1) != 'a':  # строчная «a» — это артикль, а не нота ля
+        if m.group(1) != 'a':  # a lowercase "a" is an article, not the note A
             acc = (m.group(2) or '').lower().lstrip('-')
             key = (EN_KEYS[m.group(1).upper()] + (1 if acc in ('#', '♯', 'sharp') else -1 if acc else 0)) % 12
             break
@@ -215,7 +215,7 @@ def interpret_prompt(text, genre, duration_label, voice_on, voice_type, rng):
     if m_drop:
         drop_sec = float(m_drop.group(2).replace(',', '.'))
         notes.append(T('дроп / акцент на {0:g} с — из описания').format(drop_sec))
-        t = t[:m_drop.start()] + t[m_drop.end():]  # чтобы число не приняли за длительность
+        t = t[:m_drop.start()] + t[m_drop.end():]  # so the number isn't taken for a duration
     m_min = re.search(r'(\d+(?:[.,]\d+)?)\s*(мин|min)', t)
     m_sec = re.search(r'(\d+)\s*(сек|sec|s\b|с\b)', t)
     m_clk = re.search(r'\b(\d):([0-5]\d)\b', t)
@@ -253,7 +253,7 @@ def interpret_prompt(text, genre, duration_label, voice_on, voice_type, rng):
 
 
 def apply_companion_sound(song, res):
-    """Дополнительные звуковые штрихи по описанию."""
+    """Extra sound touches from the description."""
     for tr in song.tracks:
         if tr.kind == 'lead' and res['lead_preset']:
             vol = tr.volume

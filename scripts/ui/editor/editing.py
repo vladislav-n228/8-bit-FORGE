@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Правка нот (копировать, транспонировать, квантовать…) и параметры звука трека."""
+"""Note editing (copy, transpose, quantize…) and the track's sound parameters."""
 
 import random
 import tkinter as tk
@@ -15,7 +15,7 @@ from scripts.ui.style import PMAX, PMIN
 
 
 class EditingMixin:
-    """Правка нот (копировать, транспонировать, квантовать…) и параметры звука трека."""
+    """Note editing (copy, transpose, quantize…) and the track's sound parameters."""
 
     def target_notes(self):
         if self.mode == 'edit' and self.sel_notes:

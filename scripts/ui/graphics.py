@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Графика для холста: скруглённые прямоугольники, мягкий фон со «свечением», пиксельная иконка программы."""
+"""Canvas graphics: rounded rectangles, a soft "glowing" background, the app's pixel icon."""
 
 import math
 import tkinter as tk
@@ -8,8 +8,8 @@ import numpy as np
 
 from scripts.core.theory import _rgb, clamp
 
-# Пиксельная иконка 16×16: нота на тёмной «кнопке». . — фон, # — нота, o — тень, b — рамка.
-# Ею помечены окна программы, и из неё же build.py делает иконку .exe.
+# 16×16 pixel icon: a note on a dark "button". . — background, # — note, o — shadow, b — border.
+# It marks the app's windows, and build.py makes the .exe icon from it as well.
 ICON_PIXELS = ['bbbbbbbbbbbbbbbb',
                'b..............b',
                'b......######..b',
@@ -30,20 +30,20 @@ ICON_COLORS = {'.': '#0d0d16', '#': '#00d9ff', 'o': '#a970ff', 'b': '#2c2c40'}
 
 
 def set_app_icon(root):
-    """Иконка для всех окон программы (заголовок и панель задач) — рисуется прямо из пикселей, без файла."""
+    """Icon for all of the app's windows (title bar and taskbar) — drawn straight from pixels, no file."""
     images = []
-    for scale in (1, 2, 4):  # Windows сам выберет подходящий размер
+    for scale in (1, 2, 4):  # Windows picks the right size itself
         img = tk.PhotoImage(master=root, width=16 * scale, height=16 * scale)
         for y, row in enumerate(ICON_PIXELS):
             line = '{' + ' '.join(ICON_COLORS[ch] for ch in row for _ in range(scale)) + '}'
             img.put(' '.join([line] * scale), to=(0, y * scale))
         images.append(img)
     root.iconphoto(True, *images)
-    root._forge_icons = images  # держим ссылки, иначе картинки удалит сборщик мусора
+    root._forge_icons = images  # keep references, otherwise the garbage collector deletes the images
 
 
 def round_rect(cv, x0, y0, x1, y1, r, **kw):
-    """Прямоугольник со скруглёнными углами (точные дуги — подходит и для «пилюль»)."""
+    """Rectangle with rounded corners (exact arcs — works for "pills" too)."""
     r = max(0.0, min(r, (x1 - x0) / 2, (y1 - y0) / 2))
     n = int(clamp(r / 3, 3, 14))
     pts = []
@@ -55,7 +55,7 @@ def round_rect(cv, x0, y0, x1, y1, r, **kw):
 
 
 def _glow_image(W, H, base, glows, scale=3):
-    """Мягкий фон с цветными «свечениями» (как у нейросетевых чатов) → массив H×W×3 uint8."""
+    """Soft background with colored "glows" (like in AI chats) → an H×W×3 uint8 array."""
     w, h = max(1, -(-W // scale)), max(1, -(-H // scale))
     yy, xx = np.ogrid[0:h, 0:w]
     img = np.empty((h, w, 3), np.float32)
@@ -65,7 +65,7 @@ def _glow_image(W, H, base, glows, scale=3):
         k = (a * np.exp(-d * 2.2))[..., None]
         img = img * (1 - k) + _rgb(col) * k
     img = img.repeat(scale, 0).repeat(scale, 1)[:H, :W]
-    img += np.random.default_rng(7).uniform(-1.5, 1.5, img.shape).astype(np.float32)  # шум против «ступенек»
+    img += np.random.default_rng(7).uniform(-1.5, 1.5, img.shape).astype(np.float32)  # noise against "banding"
     return np.clip(img, 0, 255).astype(np.uint8)
 
 

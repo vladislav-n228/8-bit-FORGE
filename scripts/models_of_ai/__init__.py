@@ -1,11 +1,11 @@
-"""Модели Forge для чат-студии (работают офлайн).
+"""Forge models for the chat studio (they work offline).
 
-  auto.py     — Forge Auto: выбирает модель по запросу
-  melody.py   — Forge Melody: песни и темы
-  ambient.py  — Forge Ambient: фон и петли
-  action.py   — Forge Action: битвы, погони, гонки
-  jingle.py   — Forge Jingle: короткие джинглы
-  sfx.py      — Forge SFX: звуковые эффекты
+  auto.py     — Forge Auto: picks a model for the request
+  melody.py   — Forge Melody: songs and themes
+  ambient.py  — Forge Ambient: backgrounds and loops
+  action.py   — Forge Action: battles, chases, races
+  jingle.py   — Forge Jingle: short jingles
+  sfx.py      — Forge SFX: sound effects
 
-Общие части: understanding.py (понимание запроса), base_composer.py (композитор), genres.py, lexicon.py,
-music_theory.py, common.py, registry.py (список моделей), respond.py (ответ в чат)."""
+Shared parts: understanding.py (understanding the request), base_composer.py (composer), genres.py, lexicon.py,
+music_theory.py, common.py, registry.py (list of models), respond.py (reply to the chat)."""

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Громкость для соцсетей (LUFS, ITU-R BS.1770) и лимитер."""
+"""Loudness for social media (LUFS, ITU-R BS.1770) and a limiter."""
 
 import math
 
@@ -16,15 +16,15 @@ _K_CACHE = {}
 
 def _biquad_response(b, a, w, cs=None):
     c1, s1 = cs if cs is not None else (np.cos(w), np.sin(w))
-    c2, s2 = 2 * c1 * c1 - 1, 2 * s1 * c1  # cos 2w, sin 2w без второй экспоненты
+    c2, s2 = 2 * c1 * c1 - 1, 2 * s1 * c1  # cos 2w, sin 2w without a second exponential
     num = (b[0] + b[1] * c1 + b[2] * c2) - 1j * (b[1] * s1 + b[2] * s2)
     den = (a[0] + a[1] * c1 + a[2] * c2) - 1j * (a[1] * s1 + a[2] * s2)
     return num / den
 
 
 def _k_filter(nf, sr):
-    """АЧХ K-фильтра (полка +4 дБ над 1.5 кГц и срез ниже 38 Гц) для БПФ длины nf; кэшируется —
-    при нормализации громкость меряется дважды на одной длине."""
+    """K-filter frequency response (+4 dB shelf above 1.5 kHz and a cut below 38 Hz) for an FFT of length nf; cached —
+    normalization measures loudness twice at the same length."""
     key = (nf, sr)
     H = _K_CACHE.get(key)
     if H is not None:
@@ -49,7 +49,7 @@ def _k_filter(nf, sr):
 
 
 def _fast_len(n):
-    """Ближайшая длина ≥ n из множителей 2, 3, 5 — БПФ такой длины в разы быстрее, чем длины трека «как есть»."""
+    """The nearest length ≥ n made of factors 2, 3, 5 — an FFT of such length is many times faster than the track's raw length."""
     best = 1 << max(0, (n - 1).bit_length())
     p5 = 1
     while p5 < best:
@@ -63,11 +63,11 @@ def _fast_len(n):
 
 
 def measure_lufs(audio, sr):
-    """Интегральная громкость: K-фильтр (в частотной области) + стробирование блоками 400 мс."""
+    """Integrated loudness: K-filter (in the frequency domain) + gating in 400 ms blocks."""
     n = len(audio)
     if n < int(0.4 * sr):
         return -70.0
-    nf = _fast_len(n)  # с запасом нулей: быстрее и без «заворота» фильтра с конца трека в начало
+    nf = _fast_len(n)  # zero-padded: faster, and the filter doesn't "wrap around" from the end of the track to the start
     H = _k_filter(nf, sr)
     power = np.zeros(n)
     for ch in range(audio.shape[1]):
@@ -90,7 +90,7 @@ def measure_lufs(audio, sr):
 
 
 def limit_peaks(audio, sr, ceiling=0.891, block=256):
-    """Простой лимитер: мгновенная атака, плавное отпускание, потолок −1 dBFS."""
+    """Simple limiter: instant attack, smooth release, −1 dBFS ceiling."""
     n = len(audio)
     pk = np.abs(audio).max(axis=1)
     nb = (n + block - 1) // block
@@ -98,7 +98,7 @@ def limit_peaks(audio, sr, ceiling=0.891, block=256):
     g = np.minimum(1.0, ceiling / np.maximum(pk, 1e-9))
     g = np.minimum(g, np.minimum(np.concatenate([g[1:], [1.0]]), np.concatenate([[1.0], g[:-1]])))
     rel = block / (0.15 * sr)
-    # плавное отпускание: gs[i] = min(g[i], gs[i-1] + rel) — то же самое без цикла через накопленный минимум
+    # smooth release: gs[i] = min(g[i], gs[i-1] + rel) — the same thing without a loop, via a running minimum
     ramp = np.arange(nb) * rel
     gs = np.minimum.accumulate(g - ramp) + ramp
     gain = np.interp(np.arange(n), np.arange(nb) * block + block / 2, gs)

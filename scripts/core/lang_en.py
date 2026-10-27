@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Английский перевод интерфейса: русская строка из кода → английская.
-Строки с {0}, {1}… — шаблоны: порядок подстановок тот же, что и в русском тексте."""
+"""English translation of the interface: Russian string from the code → English.
+Strings with {0}, {1}… are templates: the order of substitutions is the same as in the Russian text."""
 
 EN = {
-    # ── запуск, ffmpeg, метки битов ──
+    # ── startup, ffmpeg, beat markers ──
     'Нужна библиотека numpy.\n\nУстановите:  pip install numpy':
         'The numpy library is required.\n\nInstall it with:  pip install numpy',
     'неизвестная ошибка': 'unknown error',
@@ -17,7 +17,7 @@ EN = {
     'Такт {0}': 'Bar {0}',
     'Аккорд {0}': 'Chord {0}',
 
-    # ── ответы моделей Forge ──
+    # ── Forge model replies ──
     '«✎ В редактор» — доработать вручную, «⚄ Ещё вариант» — другой трек по тому же запросу.':
         '“✎ To editor” — polish it by hand, “⚄ Another take” — a different track for the same request.',
     'Разбираю запрос': 'Reading your request',
@@ -90,7 +90,7 @@ EN = {
     'тональность из запроса: {0}': 'key from your request: {0}',
     'темп из запроса: {0} BPM': 'tempo from your request: {0} BPM',
 
-    # ── компаньон (старый помощник) ──
+    # ── companion (the old assistant) ──
     'длительность взял из описания': 'took the length from the description',
     'ключевых слов о жанре не нашёл — выбрал по настроению': 'found no genre keywords — chose by mood',
     ' — так сказано в описании': ' — as the description says',
@@ -109,7 +109,7 @@ EN = {
 }
 
 
-# ── чат-студия ──
+# ── chat studio ──
 EN.update({
     'Не получилось сочинить.': "Couldn't compose that.",
     'Пишите свободно: жанр или место (замок, космос, гонки), настроение (грустно, эпично), темп (быстро, 140 bpm), '
@@ -170,7 +170,7 @@ EN.update({
 })
 
 
-# ── ручной режим: главное окно ──
+# ── manual mode: main window ──
 EN.update({
     'Язык сменится при следующем запуске программы.': 'The language will change the next time you start the program.',
     '▶  Играть': '▶  Play',
@@ -373,7 +373,7 @@ EN.update({
 })
 
 
-# ── ручной режим: дорожки, компаньон, правка, файлы ──
+# ── manual mode: tracks, companion, editing, files ──
 EN.update({
     'ДОРОЖКИ': 'TRACKS',
     'такты / аккорды  →': 'bars / chords  →',
@@ -559,7 +559,7 @@ EN.update({
 })
 
 
-# ── окна «Для видео», звуковые эффекты, мышь, воспроизведение, стартовый экран ──
+# ── "For video" windows, sound effects, mouse, playback, start screen ──
 EN.update({
     'метки битов': 'beat markers',
     'Что отмечать': 'What to mark',
@@ -673,7 +673,7 @@ EN.update({
 })
 
 
-# ── внутренние ключи: лады, партии, стили, пресеты (в проектах хранятся по-русски) ──
+# ── internal keys: scales, parts, styles, presets (stored in Russian in projects) ──
 EN.update({
     'Мажор': 'Major',
     'Минор': 'Minor',
@@ -885,7 +885,7 @@ EN.update({
 })
 
 
-# ── опции чата, жанры и названия треков ──
+# ── chat options, genres and track titles ──
 EN.update({
     'По запросу': 'From request',
     '3 секунды': '3 seconds',
@@ -1039,7 +1039,7 @@ EN.update({
 })
 
 
-# ── музыкальные термины в ответах, модели, звуковые эффекты, теги запроса ──
+# ── music terms in replies, models, sound effects, request tags ──
 EN.update({
     'поп-бит': 'pop beat',
     'рок-бит': 'rock beat',
@@ -1139,7 +1139,7 @@ EN.update({
 })
 
 
-# ── компаньон, примеры запросов, стартовый экран, подсказки к меткам ──
+# ── companion, example requests, start screen, marker hints ──
 EN.update({
     'Авто (по описанию)': 'Auto (from description)',
     'Экшен / скорость': 'Action / speed',
@@ -1208,4 +1208,67 @@ EN.update({
     'аудио есть функция «Ритм / Beat» — с нашим треком она работает отлично.':
         "CapCut and mobile editors don't import markers — keep the list next to you while editing.\nTip: CapCut "
         'has a “Beat” feature for audio — it works great with our tracks.',
+    # track import
+    'Файл повреждён (не удалось распаковать)': 'The file is damaged (could not decompress it)',
+    'Формат NSFe не поддерживается — сохраните трек как обычный .nsf': 'NSFe is not supported — save the track as a regular .nsf',
+    'Неизвестный формат файла. Поддерживаются: MIDI, NSF (Dendy), VGM / VGZ (Sega), проекты 8-BIT FORGE (.json)': 'Unknown file format. Supported: MIDI, NSF (NES), VGM / VGZ (Sega), 8-BIT FORGE projects (.json)',
+    'Файл повреждён': 'The file is damaged',
+    'Неизвестный формат файла': 'Unknown file format',
+    'В файле не нашлось нот (или звуковой чип этой записи не поддерживается)': 'No notes found in the file (or the sound chip of this recording is not supported)',
+    'Файл MIDI повреждён': 'The MIDI file is damaged',
+    'MIDI с SMPTE-временем не поддерживается': 'MIDI files with SMPTE timing are not supported',
+    'Пульс 1': 'Pulse 1',
+    'Пульс 2': 'Pulse 2',
+    'Сэмплы (DAC)': 'Samples (DAC)',
+    'Импорт трека': 'Import track',
+    'Все поддерживаемые': 'All supported',
+    'Dendy / NES (NSF, VGM)': 'NES (NSF, VGM)',
+    'Sega (VGM, VGZ)': 'Sega (VGM, VGZ)',
+    'Не удалось импортировать:\n{0}': 'Could not import:\n{0}',
+    'В файле {0} мелодий. Какую импортировать? (1–{0})': 'The file has {0} tunes. Which one to import? (1–{0})',
+    '⚠ Не удалось импортировать': '⚠ Could not import',
+    '⬆ Импорт: {0}': '⬆ Import: {0}',
+    '⬆ Импортировано: «{0}» — дорожек: {1}, нот: {2}, {3}. Пробел — слушать.': '⬆ Imported: “{0}” — tracks: {1}, notes: {2}, {3}. Space to listen.',
+    '⬆ Импорт трека (MIDI, Dendy, Sega)…   Ctrl+I': '⬆ Import track (MIDI, NES, Sega)…   Ctrl+I',
+    '⬆  Импорт': '⬆  Import',
+    'Импорт трека…   Ctrl+I': 'Import track…   Ctrl+I',
+    'Проект 8-BIT FORGE (.json)…': '8-BIT FORGE project (.json)…',
+    'MIDI (.mid) — и экспорт этой программы…': 'MIDI (.mid) — including this app’s exports…',
+    'Dendy / NES — NSF, VGM…': 'NES — NSF, VGM…',
+    'Sega Mega Drive / Master System — VGM, VGZ…': 'Sega Mega Drive / Master System — VGM, VGZ…',
+    '⬆  Импорт трека…': '⬆  Import track…',
+    # chat history
+    '☰  История': '☰  History',
+    'История чатов': 'Chat history',
+    'Пока пусто': 'Nothing here yet',
+    'здесь появятся ваши чаты с мелодиями': 'your chats with tunes will appear here',
+    'Более ранние чаты': 'Older chats',
+    'Более свежие чаты': 'Newer chats',
+    'Удалить этот чат': 'Delete this chat',
+    'Удалить этот чат из истории?': 'Delete this chat from history?',
+    'Чат удалён': 'Chat deleted',
+    'Не удалось сохранить чат в историю': 'Could not save the chat to history',
+    'Модель ещё сочиняет — откройте чат чуть позже': 'The model is still composing — open the chat a bit later',
+    'Не удалось открыть этот чат': 'Could not open this chat',
+    '♫  Собираю звук трека…': '♫  Building the track’s sound…',
+    '✓  Звук готов': '✓  Sound ready',
+    'Не удалось собрать звук': 'Could not build the sound',
+    'запрос': 'request',
+    'запросов': 'requests',
+    # instrument choice
+    'Инструменты': 'Instruments',
+    'выбрано {0}': '{0} selected',
+    'Инструменты в треке': 'Instruments in the track',
+    'Авто — модель подберёт сама': 'Auto — the model picks them',
+    'или отметьте галочками — будут играть только они': 'or tick them — only those will play',
+    'Мелодия и аккорды': 'Melody and chords',
+    'Ритм': 'Rhythm',
+    'Треугольный бас (NES)': 'Triangle bass (NES)',
+    'FM слэп-бас (Sega)': 'FM slap bass (Sega)',
+    'Квадратный бас (NES)': 'Square bass (NES)',
+    'Пила-бас': 'Saw bass',
+    'Арпеджио-блип': 'Arp blip',
+    'инструменты выбраны вручную: {0}': 'instruments chosen by hand: {0}',
+    'без лида': 'no lead',
+    'без баса': 'no bass',
 })

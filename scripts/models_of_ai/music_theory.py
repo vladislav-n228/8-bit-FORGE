@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Музыкальные знания моделей: прогрессии по ладам, ритмы мотивов, грувы, басовые фигуры."""
+"""The models' musical knowledge: progressions by scale, motif rhythms, grooves, bass figures."""
 
 from scripts.core.constants import BASS_EVENTS, PROGRESSIONS
 
@@ -7,7 +7,7 @@ from scripts.core.constants import BASS_EVENTS, PROGRESSIONS
 AI_FAMILY = {'Пентатоника мажор': 'Мажор', 'Пентатоника минор': 'Минор', 'Блюзовый': 'blues'}
 
 
-# Прогрессии по ладам (ступени родительского лада); уменьшённые аккорды не используются.
+# Progressions by scale (degrees of the parent scale); diminished chords are not used.
 AI_PROGS = {
     'Мажор': dict(verse=[[0, 4, 5, 3], [0, 5, 3, 4], [0, 3, 0, 4], [0, 2, 3, 4], [0, 3, 5, 4]],
                   chorus=[[3, 4, 0, 5], [0, 4, 5, 3], [3, 0, 4, 0], [5, 3, 0, 4], [3, 4, 2, 5]],
@@ -34,7 +34,7 @@ AI_PROGS = {
 }
 
 
-# Ритм мотива на такт (16 шагов по 1/16): x — нота, . — продолжение / пауза
+# Motif rhythm per bar (16 steps of 1/16): x — note, . — continuation / rest
 AI_RHYTHMS = {
     'calm': ['x...x...x.......', 'x.......x...x...', 'x.....x.x.......', 'x...........x...', 'x.....x...x.....',
              'x.......x.......', 'x...x.......x...'],
@@ -50,7 +50,7 @@ AI_CAD_RHYTHMS = {'calm': ['x...............', 'x.......x.......', 'x...x.......
                   'busy': ['x.xxx.x.x.......', 'xxx.x...x.......', 'x.x.x.xxx.......']}
 
 
-# Грувы ударных: k — бочка, s — малый (o — тихая «призрачная» нота), h — хэт (o — открытый)
+# Drum grooves: k — kick, s — snare (o — quiet "ghost" note), h — hi-hat (o — open)
 AI_GROOVES = {
     'pop': dict(k='x.......x.x.....', s='....x.......x...', h='x.x.x.x.x.x.x.x.'),
     'rock': dict(k='x.....x.x.......', s='....x.......x...', h='x.x.x.x.x.x.x.x.'),

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Генерация трека по настройкам, ♻ Recreate куска и кэш старых вариантов."""
+"""Track generation from the settings, ♻ Recreate of a piece and the cache of old variants."""
 
 import copy
 import random
@@ -15,7 +15,7 @@ from scripts.music.generator import build_song
 
 
 class GenerationMixin:
-    """Генерация трека по настройкам, ♻ Recreate куска и кэш старых вариантов."""
+    """Track generation from the settings, ♻ Recreate of a piece and the cache of old variants."""
 
     def collect_params(self):
         try:
@@ -62,7 +62,7 @@ class GenerationMixin:
         self.set_status(T('⚡ Сгенерировано: {0}, {1} {2}, seed {3}. Пробел — слушать.').format(T(params["style"]), NOTE_NAMES[params["key"]], T(params["scale"]), seed))
 
     def load_external_song(self, song, label=None):
-        """Трек из чат-студии → в редактор; предыдущий остаётся доступен через «◀ Назад»."""
+        """A track from the chat studio → into the editor; the previous one stays available via "◀ Back"."""
         first = self.song is None
         if not first:
             self.stop()

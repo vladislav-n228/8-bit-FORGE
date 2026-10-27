@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Поиск ffmpeg и экспорт MP3."""
+"""Finding ffmpeg and exporting MP3."""
 
 import os
 import shutil
@@ -16,7 +16,7 @@ _FFMPEG = {}
 
 
 def _bundled_ffmpeg():
-    """ffmpeg, положенный рядом с программой: внутрь собранного .exe, рядом с .exe или с Generator_of_music.py."""
+    """ffmpeg shipped with the app: inside the built .exe, next to the .exe or next to Generator_of_music.py."""
     name = 'ffmpeg.exe' if os.name == 'nt' else 'ffmpeg'
     here = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     for d in (getattr(sys, '_MEIPASS', None), os.path.dirname(sys.executable) if getattr(sys, 'frozen', False)

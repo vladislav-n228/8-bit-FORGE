@@ -1,1 +1,1 @@
-"""Модули 8-BIT FORGE. Точка входа — Generator_of_music.py рядом с этой папкой."""
+"""8-BIT FORGE modules. The entry point is Generator_of_music.py next to this folder."""

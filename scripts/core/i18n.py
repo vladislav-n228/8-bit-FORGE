@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-"""Язык интерфейса: английский (по умолчанию) или русский.
+"""Interface language: English (default) or Russian.
 
-Тексты в коде написаны по-русски; T('…') возвращает их перевод на текущий язык.
-Внутренние ключи (названия стилей, ладов, пресетов) остаются русскими — они хранятся в проектах
-и настройках, а переводятся только при показе на экране. Поэтому T() вызывается в момент показа,
-а не при импорте: язык можно сменить на лету, окна просто перестраиваются."""
+Texts in the code are written in Russian; T('…') returns their translation into the current language.
+Internal keys (names of styles, scales, presets) stay in Russian — they are stored in projects
+and settings and are translated only when shown on screen. That's why T() is called at display time
+rather than at import: the language can be switched on the fly, the windows are simply rebuilt."""
 
 import json
 
@@ -46,15 +46,15 @@ def set_lang(lang):
 
 
 def T(text):
-    """Перевод строки интерфейса на текущий язык. Незнакомые строки (имена треков от пользователя и т.п.)
-    возвращаются как есть."""
+    """Translates an interface string into the current language. Unknown strings (user track names, etc.)
+    are returned as is."""
     if LANG == 'ru' or not isinstance(text, str):
         return text
     return _table().get(text, text)
 
 
 def Tn(n, one, few, many):
-    """Число с правильной формой слова: Tn(5, 'звук', 'звука', 'звуков') → «звуков» / «sounds»."""
+    """A number with the right word form: Tn(5, 'звук', 'звука', 'звуков') → «звуков» / «sounds»."""
     if LANG != 'ru':
         return T(one) if n == 1 else T(many)
     if n % 10 == 1 and n % 100 != 11:

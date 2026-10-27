@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Ответ модели: запрос → готовый трек / звуки + текст для чата."""
+"""Model reply: request → finished track / sounds + text for the chat."""
 
 import random
 
@@ -8,6 +8,7 @@ from scripts.core.constants import TRACK_DEFS, VOWEL_NAMES
 from scripts.core.i18n import T
 from scripts.core.theory import fmt_time
 from scripts.models_of_ai.common import _ai_peaks, AI_MASTER, key_text
+from scripts.models_of_ai.instruments import apply_instruments
 from scripts.models_of_ai.jingle import _ai_jingle
 from scripts.models_of_ai.music_theory import (
     AI_AMBIENT_NAMES, AI_BASS_NAMES, AI_GROOVE_NAMES, AI_HARM_NAMES, AI_SECTION_NAMES)
@@ -45,10 +46,10 @@ def _ai_music_reply(plan, song, secs, audio, sr):
         else:
             lines.append(T('• Мелодия: короткий мотив повторяется и развивается в 4-тактовые фразы, фразы '
                          'завершаются каденциями; припев звучит выше и ярче куплета.'))
-        arr = [T('лид — «{0}»').format(T(P["sounds"][0])),
+        arr = [T('лид — «{0}»').format(T(P["sounds"][0])) if by['lead'].notes else T('без лида'),
                T('гармония — {0}').format(T(AI_HARM_NAMES[P["harm"][0]])) +
                (T(' / в припеве {0}').format(T(AI_HARM_NAMES[P["harm"][1]])) if P['harm'][1] != P['harm'][0] else ''),
-               T('бас — {0}').format(T(AI_BASS_NAMES[P["bass"]]))]
+               T('бас — {0}').format(T(AI_BASS_NAMES[P["bass"]])) if by['bass'].notes else T('без баса')]
         if by['arp'].notes:
             arr.append(T('арпеджио'))
         arr.append(T('ударные — {0}').format(T(AI_GROOVE_NAMES[P["groove"]])) if by['drums'].notes else T('без ударных'))
@@ -69,7 +70,7 @@ def _ai_music_reply(plan, song, secs, audio, sr):
 
 
 def ai_respond(text, opts, seed, status=None, render=render_song):
-    """Главная точка входа чата: запрос → ответ модели с готовым звуком."""
+    """The chat's main entry point: request → the model's reply with finished sound."""
     status = status or (lambda s: None)
     status(T('Разбираю запрос'))
     plan = ai_understand(text, opts, random.Random(seed))
@@ -83,8 +84,10 @@ def ai_respond(text, opts, seed, status=None, render=render_song):
         status(T('Сочиняю мелодию и гармонию'))
         comp = AI_COMPOSERS[plan['model']](plan, seed)
         song, secs = comp.compose(), comp.secs
+    apply_instruments(song, plan, opts.get('instruments'), random.Random(seed + 1))
     status(T('Свожу дорожки'))
-    audio, sr = render(song, AI_MASTER, loop=plan['loop'])  # render можно подменить (например, рендер в процессе)
+    audio, sr = render(song, AI_MASTER, loop=plan['loop'])  # render can be swapped out (e.g. rendering in a process)
     head, body, sub = _ai_music_reply(plan, song, secs, audio, sr)
-    res = dict(kind='song', title=plan['title'], sub=sub, song=song, audio=audio, sr=sr, peaks=_ai_peaks(audio))
+    res = dict(kind='song', title=plan['title'], sub=sub, song=song, audio=audio, sr=sr, peaks=_ai_peaks(audio),
+               loop=plan['loop'])
     return dict(model=plan['model'], head=head, text=body, results=[res])

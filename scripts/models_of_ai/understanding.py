@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Понимание запроса: текст и опции чата → план трека (модель, жанр, лад, темп, форма…)."""
+"""Request understanding: text and chat options → track plan (model, genre, scale, tempo, form…)."""
 
 import re
 
 from scripts.core.constants import VOWEL_NAMES
 from scripts.core.i18n import T
 from scripts.core.theory import clamp
+from scripts.models_of_ai.instruments import vary_sounds
 from scripts.models_of_ai.auto import choose_model
 from scripts.models_of_ai.common import _ai_seconds, _ai_strength, _ai_words, AI_DURATIONS, AI_VOCALS, key_text
 from scripts.models_of_ai.genres import _NES, _SEGA, AI_DEFAULT_GENRES, AI_GENRES
@@ -17,9 +18,9 @@ from scripts.music.companion import EN_KEYS, KEY_WORDS, MINOR_SCALES, NEGATIONS
 
 
 def ai_understand(text, opts, rng):
-    """Запрос + выбранные опции → план: модель, жанр, лад, темп, длительность, форма, звуки, вокал."""
+    """Request + chosen options → plan: model, genre, scale, tempo, duration, form, sounds, vocals."""
     t, words = _ai_words(text)
-    feat = dict(val=0.0, en=0.0, dark=0.0, epic=0.0, dream=0.0)  # сдвиг характера относительно жанра
+    feat = dict(val=0.0, en=0.0, dark=0.0, epic=0.0, dream=0.0)  # character shift relative to the genre
     votes = dict(melody=.3, ambient=0.0, action=0.0, jingle=0.0, sfx=0.0)
     gvotes, tags, notes = {}, [], []
     S = dict(tempo=0, voc=None, chip=None, mood=None, lead=None, jt=None, vowel=None, loop=False)
@@ -27,7 +28,7 @@ def ai_understand(text, opts, rng):
         k = _ai_strength(t, words, stems)
         if not k:
             continue
-        if k < 0:  # «не грустно» — лёгкий сдвиг в обратную сторону
+        if k < 0:  # "not sad" — a slight shift in the opposite direction
             for f, d in eff.get('f', {}).items():
                 feat[f] -= d * .5
             continue
@@ -43,7 +44,7 @@ def ai_understand(text, opts, rng):
                 S[key] = eff[key]
         if eff.get('tag'):
             tags.append(eff['tag'])
-    for name, g in AI_GENRES.items():  # каждое совпавшее слово жанра — голос («битва с боссом» > «в замке»)
+    for name, g in AI_GENRES.items():  # every matched genre word is a vote ("boss battle" > "in a castle")
         k = sum(max(0.0, _ai_strength(t, words, (s,))) for s in g['kw'])
         if k > 0:
             gvotes[name] = gvotes.get(name, 0) + 2 * k
@@ -54,7 +55,7 @@ def ai_understand(text, opts, rng):
              dream=.3 + feat['dream'])
     wts = (('val', 1.2), ('en', 1.0), ('dark', .8), ('epic', .6), ('dream', .8))
 
-    def dist(n):  # насколько характер жанра далёк от характера запроса
+    def dist(n):  # how far the genre's character is from the request's character
         return sum(w * (AI_GENRES[n]['feat'][k] - u[k]) ** 2 for k, w in wts)
     genre = opts.get('genre') if opts.get('genre') in AI_GENRES else None
     if genre:
@@ -105,6 +106,8 @@ def ai_understand(text, opts, rng):
     if chip != g['chip']:
         conv, other = (_NES, 'Sega') if chip == 'nes' else (_SEGA, 'NES')
         sounds = [conv[i] if s.startswith(other) else s for i, s in enumerate(sounds)]
+    if not opts.get('instruments'):  # instruments on "auto" — timbres change a little from track to track
+        sounds = vary_sounds(sounds, chip, rng, lead_fixed=bool(S['lead']))
     if S['lead']:
         sounds[0] = S['lead']
     key, exact_scale = rng.randrange(12), None
@@ -114,7 +117,7 @@ def ai_understand(text, opts, rng):
             key = (kk + (0 if not m.group(1) else 1 if 'диез' in m.group(1) else -1)) % 12
             S['mood'] = 'minor' if m.group(2) == 'минор' else 'major'
             exact_scale = 'Минор' if m.group(2) == 'минор' else 'Мажор'
-    if exact_scale is None:  # по-английски: «A minor», «C# major», «Bb minor» (строчная «a» — это артикль)
+    if exact_scale is None:  # in English: "A minor", "C# major", "Bb minor" (a lowercase "a" is an article)
         for m in re.finditer(r'\b([A-Ga-g])\s*(#|♯|b|♭|-?sharp|-?flat)?[\s-]+(minor|major)\b', text, re.I):
             if m.group(1) == 'a':
                 continue
